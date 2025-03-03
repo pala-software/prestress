@@ -1,7 +1,10 @@
 { pkgs, lib, config, inputs, ... }:
 
 {
-  packages = [ pkgs.git ];
+  packages = with pkgs; [
+    git
+    wgo
+  ];
   env = {
     PALAKIT_ENVIRONMENT = "development";
     PALAKIT_DB_CONNECTION_STRING = "dbname=palakit";
@@ -13,5 +16,9 @@
     initialDatabases = [
       { name = "palakit"; }
     ];
+  };
+  processes.palakit = {
+    exec = "wgo run cmd/palakit/palakit.go start";
+    process-compose.depends_on.postgres.condition = "process_ready";
   };
 }
