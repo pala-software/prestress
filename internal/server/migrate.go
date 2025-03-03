@@ -11,6 +11,17 @@ var migrations embed.FS
 
 func (server Server) RunMigrations() error {
 	var err error
+
+	err = server.readConfiguration()
+	if err != nil {
+		return err
+	}
+
+	err = server.connectToDatabase()
+	if err != nil {
+		return err
+	}
+
 	var initialized sql.NullBool
 	err = server.DB.QueryRow(
 		`SELECT TRUE
