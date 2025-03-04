@@ -18,15 +18,22 @@ type Server struct {
 	// Connections
 	DB   *sql.DB
 	HTTP *http.Server
+
+	// State
+	subscriptions map[int]*Subscription
 }
 
 func (server Server) Start() error {
+	// Initialize state
+	server.subscriptions = make(map[int]*Subscription)
+
 	if err := server.readConfiguration(); err != nil {
 		return err
 	}
 	if err := server.connectToDatabase(); err != nil {
 		return err
 	}
+	go server.listenForChange()
 	if err := server.startHttpServer(); err != nil {
 		return err
 	}

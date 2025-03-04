@@ -333,29 +333,23 @@ AS $$
 
     EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
-    FOR table_schema, table_name IN
-      SELECT related_table.table_schema, related_table.table_name
-      FROM watcher.get_related_tables(NEW.table_schema, NEW.table_name)
-      AS related_table
-    LOOP
-      EXECUTE format('CREATE TRIGGER %I
-        BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
-        FOR EACH STATEMENT
-        EXECUTE FUNCTION pg_temp.%I();',
-        'wb_' || NEW.id,
-        NEW.table_schema,
-        NEW.table_name,
-        'wb_' || NEW.id);
+    EXECUTE format('CREATE TRIGGER %I
+      BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
+      FOR EACH STATEMENT
+      EXECUTE FUNCTION pg_temp.%I();',
+      'wb_' || NEW.id,
+      NEW.table_schema,
+      NEW.table_name,
+      'wb_' || NEW.id);
 
-      EXECUTE format('CREATE TRIGGER %I
-        AFTER INSERT OR UPDATE OR DELETE ON %I.%I
-        FOR EACH STATEMENT
-        EXECUTE FUNCTION pg_temp.%I();',
-        'wa_' || NEW.id,
-        NEW.table_schema,
-        NEW.table_name,
-        'wa_' || NEW.id);
-    END LOOP;
+    EXECUTE format('CREATE TRIGGER %I
+      AFTER INSERT OR UPDATE OR DELETE ON %I.%I
+      FOR EACH STATEMENT
+      EXECUTE FUNCTION pg_temp.%I();',
+      'wa_' || NEW.id,
+      NEW.table_schema,
+      NEW.table_name,
+      'wa_' || NEW.id);
 
     RETURN NEW;
   END;
@@ -383,3 +377,7 @@ CREATE TRIGGER teardown_subscription
 BEFORE DELETE ON watcher.subscription
 FOR EACH ROW
 EXECUTE FUNCTION watcher.teardown_subscription();
+
+GRANT USAGE ON SCHEMA watcher TO public;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA watcher TO public;
+GRANT INSERT ON TABLE watcher.change TO public;
