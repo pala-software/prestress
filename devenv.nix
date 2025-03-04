@@ -8,7 +8,9 @@
   env = {
     PALAKIT_ENVIRONMENT = "development";
     PALAKIT_DB_CONNECTION_STRING = "dbname=palakit";
-    PALAKIT_AUTH_DISABLE = "1";
+    PALAKIT_AUTH_INTROSPECTION_URL = "http://localhost:8081/introspect";
+    PALAKIT_AUTH_CLIENT_ID = "dev";
+    PALAKIT_AUTH_CLIENT_SECRET = "dev";
   };
   languages.go.enable = true;
   services.postgres = {
