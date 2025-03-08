@@ -162,7 +162,7 @@ AS $$
       INTO changed_rows;
     ELSIF operation = 'UPDATE' THEN
       EXECUTE format(
-        diff_query,
+        diff_query || ' AND a NOT IN (SELECT b FROM %s AS b)',
         quote_ident(table_schema) || '.' ||
         quote_ident(table_name),
         (SELECT string_agg('a.'|| quote_ident(column_name), ',')
@@ -170,6 +170,7 @@ AS $$
         'IN',
         (SELECT string_agg('b.'|| quote_ident(column_name), ',')
           FROM unnest(key_columns) AS column_name),
+        quote_ident(state_table_name),
         quote_ident(state_table_name))
       INTO changed_rows;
     ELSIF operation = 'DELETE' THEN
