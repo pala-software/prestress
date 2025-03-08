@@ -3,15 +3,10 @@ CREATE SCHEMA watcher;
 CREATE TYPE watcher.operation
 AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 
-CREATE TABLE watcher.subscription (
-  id SERIAL PRIMARY KEY,
-  role_name NAME NOT NULL,
-  table_schema NAME NOT NULL,
-  table_name NAME NOT NULL
-);
+CREATE SEQUENCE subscription_id;
 
 CREATE TABLE watcher.change (
-  subscription_id INTEGER NOT NULL REFERENCES watcher.subscription(id) ON DELETE CASCADE,
+  subscription_id BIGINT NOT NULL,
   row_key JSONB NULL,
   row_data JSONB NOT NULL,
   row_operation watcher.operation NOT NULL
@@ -85,7 +80,7 @@ AS $$
 $$;
 
 CREATE FUNCTION watcher.extract_change(
-  subscription_id INTEGER,
+  subscription_id BIGINT,
   table_schema NAME,
   table_name NAME,
   operation watcher.operation)
@@ -132,7 +127,7 @@ AS $$
 $$;
 
 CREATE FUNCTION watcher.extract_change(
-  subscription_id INTEGER,
+  subscription_id BIGINT,
   table_schema NAME,
   table_name NAME,
   operation watcher.operation,
@@ -201,7 +196,7 @@ AS $$
 $$;
 
 CREATE FUNCTION watcher.record_state(
-  subscription_id INTEGER,
+  subscription_id BIGINT,
   table_schema NAME,
   table_name NAME)
 RETURNS VOID
@@ -218,7 +213,7 @@ AS $$
 $$;
 
 CREATE FUNCTION watcher.record_changes(
-  subscription_id INTEGER,
+  subscription_id BIGINT,
   table_schema NAME,
   table_name NAME)
 RETURNS VOID
@@ -291,16 +286,18 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.setup_subscription()
-RETURNS TRIGGER
+CREATE FUNCTION watcher.setup_subscription(
+  role_name NAME,
+  table_schema NAME,
+  table_name NAME)
+RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
   DECLARE
+    subscription_id BIGINT := nextval('subscription_id');
     original_role NAME := CURRENT_USER;
-    table_schema NAME;
-    table_name NAME;
   BEGIN
-    EXECUTE format('SET LOCAL ROLE TO %I', NEW.role_name);
+    EXECUTE format('SET LOCAL ROLE TO %I', role_name);
 
     EXECUTE format('CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
@@ -312,10 +309,10 @@ AS $$
           RETURN NULL;
         END;
       $s$;',
-      'wb_' || NEW.id,
-      NEW.id,
-      NEW.table_schema,
-      NEW.table_name);
+      'wb_' || subscription_id,
+      subscription_id,
+      table_schema,
+      table_name);
 
     EXECUTE format('CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
@@ -327,10 +324,10 @@ AS $$
           RETURN NULL;
         END;
       $s$;',
-      'wa_' || NEW.id,
-      NEW.id,
-      NEW.table_schema,
-      NEW.table_name);
+      'wa_' || subscription_id,
+      subscription_id,
+      table_schema,
+      table_name);
 
     EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
@@ -338,46 +335,35 @@ AS $$
       BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
       FOR EACH STATEMENT
       EXECUTE FUNCTION pg_temp.%I();',
-      'wb_' || NEW.id,
-      NEW.table_schema,
-      NEW.table_name,
-      'wb_' || NEW.id);
+      'wb_' || subscription_id,
+      table_schema,
+      table_name,
+      'wb_' || subscription_id);
 
     EXECUTE format('CREATE TRIGGER %I
       AFTER INSERT OR UPDATE OR DELETE ON %I.%I
       FOR EACH STATEMENT
       EXECUTE FUNCTION pg_temp.%I();',
-      'wa_' || NEW.id,
-      NEW.table_schema,
-      NEW.table_name,
-      'wa_' || NEW.id);
+      'wa_' || subscription_id,
+      table_schema,
+      table_name,
+      'wa_' || subscription_id);
 
-    RETURN NEW;
+    RETURN subscription_id;
   END;
 $$;
 
-CREATE FUNCTION watcher.teardown_subscription()
-RETURNS TRIGGER
+CREATE FUNCTION watcher.teardown_subscription(id BIGINT)
+RETURNS VOID
 LANGUAGE plpgsql
 AS $$
   BEGIN
     EXECUTE format('DROP FUNCTION pg_temp.%I() CASCADE;',
-      'wb_' || OLD.id);
+      'wb_' || id);
     EXECUTE format('DROP FUNCTION pg_temp.%I() CASCADE;',
-      'wa_' || OLD.id);
-    RETURN NEW;
+      'wa_' || id);
   END;
 $$;
-
-CREATE TRIGGER setup_subscription
-BEFORE INSERT ON watcher.subscription
-FOR EACH ROW
-EXECUTE FUNCTION watcher.setup_subscription();
-
-CREATE TRIGGER teardown_subscription
-BEFORE DELETE ON watcher.subscription
-FOR EACH ROW
-EXECUTE FUNCTION watcher.teardown_subscription();
 
 GRANT USAGE ON SCHEMA watcher TO public;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA watcher TO public;
