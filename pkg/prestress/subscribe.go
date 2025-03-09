@@ -39,7 +39,7 @@ func (server Server) Subscribe(
 	var subId int
 	err = conn.QueryRowContext(
 		ctx,
-		"SELECT watcher.setup_subscription($1, $2, $3, $4)",
+		"SELECT prestress.setup_subscription($1, $2, $3, $4)",
 		auth.Role,
 		schema,
 		table,
@@ -59,7 +59,7 @@ func (server Server) Subscribe(
 	context.AfterFunc(ctx, func() {
 		_, err := conn.ExecContext(
 			subCtx,
-			"SELECT watcher.teardown_subscription($1)",
+			"SELECT prestress.teardown_subscription($1)",
 			subId,
 		)
 		if err != nil {

@@ -44,11 +44,11 @@ func (server Server) listenForChange() {
 		rows, err := server.DB.QueryContext(
 			ctx,
 			`SELECT
-        subscription_id,
-        row_key AS key,
-        row_data AS data,
-        row_operation AS op
-      FROM watcher.change`,
+				subscription_id,
+				row_key AS key,
+				row_data AS data,
+				row_operation AS op
+			FROM prestress.change`,
 		)
 		if err != nil {
 			fmt.Println(err)
@@ -80,7 +80,7 @@ func (server Server) listenForChange() {
 
 		rows.Close()
 
-		_, err = server.DB.ExecContext(ctx, "TRUNCATE watcher.change")
+		_, err = server.DB.ExecContext(ctx, "TRUNCATE prestress.change")
 		if err != nil {
 			fmt.Println(err)
 			cancel()
