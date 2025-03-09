@@ -10,6 +10,7 @@ func (server *Server) StartHttpServer() error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{schema}/{table}", server.handleFind)
+	mux.HandleFunc("POST /{schema}/{table}", server.handleCreate)
 	mux.HandleFunc("GET /{schema}/{table}/subscription", server.handleSubscription)
 
 	server.HTTP = &http.Server{

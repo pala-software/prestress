@@ -8,6 +8,7 @@ import (
 	"github.com/lib/pq"
 )
 
+// TODO: Test
 func handleOperationError(writer http.ResponseWriter, err error) {
 	switch err {
 	case sql.ErrNoRows:
@@ -20,10 +21,16 @@ func handleOperationError(writer http.ResponseWriter, err error) {
 
 	if err, ok := err.(*pq.Error); ok {
 		switch err.Code.Class() {
+		case "23":
+			writer.WriteHeader(400)
+			writer.Write([]byte(err.Message))
+			return
 		case "42":
 			writer.WriteHeader(404)
+			writer.Write([]byte(err.Message))
 			return
 		}
+		fmt.Printf("CODE: %s\n", err.Code)
 	}
 
 	fmt.Println(err)
