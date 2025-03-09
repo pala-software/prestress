@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// TODO: Make default roles configurable
 const anonymousRole = "anonymous"
 const authenticatedRole = "authenticated"
 
@@ -33,7 +34,7 @@ func (server Server) Authenticate(writer http.ResponseWriter, request *http.Requ
 	}
 
 	if !strings.HasPrefix(authorization, "Bearer ") {
-		writer.WriteHeader(500)
+		writer.WriteHeader(401)
 		return nil
 	}
 

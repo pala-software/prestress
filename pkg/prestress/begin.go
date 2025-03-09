@@ -4,10 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/lib/pq"
 )
+
+var ErrForbiddenSchema = errors.New("forbidden schema")
 
 // TODO: Test
 func (server Server) Begin(
@@ -18,7 +21,7 @@ func (server Server) Begin(
 	var err error
 
 	if schema == "pg_temp" {
-		return nil, fmt.Errorf("pg_temp is forbidden")
+		return nil, ErrForbiddenSchema
 	}
 
 	tx, err := server.DB.BeginTx(ctx, nil)

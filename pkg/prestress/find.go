@@ -94,9 +94,7 @@ func (server Server) handleFind(
 		filters,
 	)
 	if err != nil {
-		// TODO: Handle error better
-		fmt.Println(err)
-		writer.WriteHeader(500)
+		handleOperationError(writer, err)
 		return
 	}
 
@@ -104,7 +102,6 @@ func (server Server) handleFind(
 
 	columns, err := rows.ColumnTypes()
 	if err != nil {
-		// TODO: Handle error better
 		fmt.Println(err)
 		writer.WriteHeader(500)
 		return
