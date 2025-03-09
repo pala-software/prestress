@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 type FilterMap map[string]string
 
 func (server Server) Find(
+	ctx context.Context,
 	auth authenticationResult,
 	schema string,
 	table string,
@@ -21,7 +23,7 @@ func (server Server) Find(
 ) (*sql.Rows, error) {
 	var err error
 
-	tx, err := server.Begin(auth, schema)
+	tx, err := server.Begin(ctx, auth, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -36,12 +38,15 @@ func (server Server) Find(
 		whereStr = "WHERE " + strings.Join(where, " AND ")
 	}
 
-	rows, err := tx.Query(fmt.Sprintf(
-		"SELECT * FROM %s.%s %s",
-		pq.QuoteIdentifier(schema),
-		pq.QuoteIdentifier(table),
-		whereStr,
-	))
+	rows, err := tx.QueryContext(
+		ctx,
+		fmt.Sprintf(
+			"SELECT * FROM %s.%s %s",
+			pq.QuoteIdentifier(schema),
+			pq.QuoteIdentifier(table),
+			whereStr,
+		),
+	)
 	if err != nil {
 		return rows, err
 	}
@@ -49,7 +54,10 @@ func (server Server) Find(
 	return rows, nil
 }
 
-func (server Server) handleFind(writer http.ResponseWriter, request *http.Request) {
+func (server Server) handleFind(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
 	var err error
 
 	schema := request.PathValue("schema")
@@ -70,13 +78,21 @@ func (server Server) handleFind(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	rows, err := server.Find(*auth, schema, table, filters)
+	rows, err := server.Find(
+		request.Context(),
+		*auth,
+		schema,
+		table,
+		filters,
+	)
 	if err != nil {
 		// TODO: Handle error better
 		fmt.Println(err)
 		writer.WriteHeader(500)
 		return
 	}
+
+	defer rows.Close()
 
 	columns, err := rows.ColumnTypes()
 	if err != nil {

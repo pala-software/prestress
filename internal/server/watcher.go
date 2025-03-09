@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -9,10 +10,9 @@ import (
 )
 
 type Change struct {
-	SubscriptionId int             `json:"subscription_id"`
-	RowKey         json.RawMessage `json:"row_key"`
-	RowData        json.RawMessage `json:"row_data"`
-	RowOperation   string          `json:"row_operation"`
+	RowOperation string          `json:"op"`
+	RowKey       json.RawMessage `json:"key"`
+	RowData      json.RawMessage `json:"data"`
 }
 
 func (server Server) listenForChange() {
@@ -37,23 +37,28 @@ func (server Server) listenForChange() {
 			continue
 		}
 
-		rows, err := server.DB.Query(`
-			SELECT
+		ctx, cancel := context.WithCancel(context.Background())
+
+		rows, err := server.DB.QueryContext(
+			ctx,
+			`SELECT
         subscription_id,
         row_key AS key,
         row_data AS data,
         row_operation AS op
-      FROM watcher.change
-		`)
+      FROM watcher.change`,
+		)
 		if err != nil {
 			fmt.Println(err)
+			cancel()
 			continue
 		}
 
 		change := Change{}
 		for rows.Next() {
+			var subscriptionId int
 			err = rows.Scan(
-				&change.SubscriptionId,
+				&subscriptionId,
 				&change.RowKey,
 				&change.RowData,
 				&change.RowOperation,
@@ -63,7 +68,7 @@ func (server Server) listenForChange() {
 				continue
 			}
 
-			subscription, exists := server.subscriptions[change.SubscriptionId]
+			subscription, exists := server.subscriptions[subscriptionId]
 			if !exists {
 				continue
 			}
@@ -71,9 +76,12 @@ func (server Server) listenForChange() {
 			subscription.Change <- change
 		}
 
-		_, err = server.DB.Exec("TRUNCATE watcher.change")
+		rows.Close()
+
+		_, err = server.DB.ExecContext(ctx, "TRUNCATE watcher.change")
 		if err != nil {
 			fmt.Println(err)
+			cancel()
 			continue
 		}
 	}
