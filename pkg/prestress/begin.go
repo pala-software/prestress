@@ -17,6 +17,10 @@ func (server Server) Begin(
 ) (*sql.Tx, error) {
 	var err error
 
+	if schema == "pg_temp" {
+		return nil, fmt.Errorf("pg_temp is forbidden")
+	}
+
 	tx, err := server.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return tx, err
