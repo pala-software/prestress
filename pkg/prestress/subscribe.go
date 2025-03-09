@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/lib/pq"
 )
 
 type Change struct {
@@ -25,6 +27,23 @@ func (server Server) Subscribe(
 	table string,
 ) (*Subscription, error) {
 	var err error
+
+	tx, err := server.Begin(ctx, auth, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = tx.ExecContext(
+		ctx,
+		fmt.Sprintf(
+			"SELECT 1 FROM %s.%s",
+			pq.QuoteIdentifier(schema),
+			pq.QuoteIdentifier(table),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
 
 	baseCtx := context.WithoutCancel(ctx)
 	subCtx, cancel := context.WithCancel(baseCtx)
