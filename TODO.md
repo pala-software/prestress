@@ -9,10 +9,10 @@
 - [x] Forbid manual insert on prestress.change table
 - [x] Forbid operating on pg_temp schema
 - [x] Forbid subscribing on unauthorized tables
+- [x] Handle errors better
+- [x] Create operation
+- [ ] Pass on pg_temp.prestress_change to subscriber on mutation operations
 - [ ] Fix view subscription
-- [ ] Handle errors better
-- [ ] Retrieve operation
-- [ ] Create operation
 - [ ] Update operation
 - [ ] Delete operation
 - [ ] Improve test coverage
