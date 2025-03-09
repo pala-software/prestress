@@ -5,9 +5,10 @@
 - [x] Setup testing
 - [x] Expose server as a library
 - [x] Rename project to Prestress
-- [ ] Permissions on watcher.change table
-- [ ] Authorize role subscribing to tables
+- [x] Write README
+- [ ] Forbid manual insert on prestress.change table
+- [ ] Forbid subscribing on unauthorized tables
+- [ ] Forbid operating on pg_temp schema
 - [ ] Fix view subscription
-- [ ] Write README
 - [ ] Improve test coverage
 - [ ] CI for tests and coverage
