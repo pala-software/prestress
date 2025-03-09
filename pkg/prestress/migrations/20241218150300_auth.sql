@@ -9,11 +9,11 @@ AS $$
       SELECT
       FROM information_schema.tables 
       WHERE table_type = 'LOCAL TEMPORARY'
-      AND table_name = 'authorization_variable'
+      AND table_name = 'prestress_auth'
     ) THEN
       SELECT var.value
       INTO value
-      FROM pg_temp.authorization_variable AS var
+      FROM pg_temp.prestress_auth AS var
       WHERE name = key;
       RETURN value;
     ELSE
@@ -25,14 +25,19 @@ $$;
 CREATE FUNCTION prestress.begin_authorized(variables jsonb)
 RETURNS VOID
 LANGUAGE plpgsql
+SET client_min_messages TO warning
 AS $$
   BEGIN
-    CREATE TEMPORARY TABLE pg_temp.authorization_variable
-      (name TEXT PRIMARY KEY, value TEXT)
-    ON COMMIT DROP;
+    CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_change
+    OF prestress.change
+    ON COMMIT DELETE ROWS;
 
-    INSERT INTO pg_temp.authorization_variable
-    SELECT key AS name, value
+    CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_auth
+      (key TEXT PRIMARY KEY, value TEXT)
+    ON COMMIT DELETE ROWS;
+
+    INSERT INTO pg_temp.prestress_auth
+    SELECT key, value
     FROM jsonb_each_text(variables);
   END;
 $$;
@@ -42,7 +47,7 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
   BEGIN
-    DROP TABLE pg_temp.authorization_variable;
+    DROP TABLE pg_temp.prestress_auth;
   END;
 $$;
 

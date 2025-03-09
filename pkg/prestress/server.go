@@ -39,7 +39,6 @@ func (server Server) Start() error {
 	if err := server.ConnectToDatabase(); err != nil {
 		return err
 	}
-	go server.listenForChange()
 	if err := server.StartHttpServer(); err != nil {
 		return err
 	}

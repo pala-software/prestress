@@ -1,19 +1,20 @@
 CREATE TYPE prestress.operation
 AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 
-CREATE SEQUENCE prestress.subscription_id;
-
-CREATE TABLE prestress.change (
-  subscription_id BIGINT NOT NULL,
-  row_key JSONB NULL,
-  row_data JSONB NOT NULL,
-  row_operation prestress.operation NOT NULL
+CREATE TYPE prestress.change AS (
+  subscription_id BIGINT,
+  row_key JSONB,
+  row_data JSONB,
+  row_operation prestress.operation
 );
+
+CREATE SEQUENCE prestress.subscription_id;
 
 CREATE FUNCTION prestress.get_primary_key(
   table_schema NAME,
   table_name NAME,
-  row_data JSONB)
+  row_data JSONB
+)
 RETURNS JSONB
 LANGUAGE plpgsql
 AS $$
@@ -39,17 +40,22 @@ AS $$
         pg_index.indisprimary = TRUE AND
         pg_index.indrelid = table_id AND
         pg_attribute.attrelid = table_id;
-    EXECUTE format('SELECT jsonb_build_array(%s)
+    EXECUTE format(
+      'SELECT jsonb_build_array(%s)
       FROM (SELECT $1 AS row_data)',
       (SELECT string_agg('row_data->' || quote_literal(column_name), ',')
-        FROM unnest(key_columns) AS column_name))
+        FROM unnest(key_columns) AS column_name)
+    )
     INTO primary_key
     USING row_data;
     RETURN primary_key;
   END;
 $$;
 
-CREATE FUNCTION prestress.get_related_tables(source_schema NAME, source_table NAME)
+CREATE FUNCTION prestress.get_related_tables(
+  source_schema NAME,
+  source_table NAME
+)
 RETURNS TABLE (table_schema NAME, table_name NAME)
 LANGUAGE sql
 AS $$
@@ -81,7 +87,8 @@ CREATE FUNCTION prestress.extract_change(
   subscription_id BIGINT,
   table_schema NAME,
   table_name NAME,
-  operation prestress.operation)
+  operation prestress.operation
+)
 RETURNS SETOF prestress.change
 LANGUAGE plpgsql
 AS $$
@@ -90,14 +97,15 @@ AS $$
     diff_query TEXT := 'SELECT array_agg(to_jsonb(a))
       FROM %s AS a
       WHERE a NOT IN (SELECT b FROM %s AS b)';
-    state_table_name NAME := 'ws_' || subscription_id;
+    state_table_name NAME := 'prestress_state_' || subscription_id;
   BEGIN
     IF operation = 'INSERT' THEN
       EXECUTE format(
         diff_query,
         quote_ident(table_schema) || '.' ||
         quote_ident(table_name),
-        quote_ident(state_table_name))
+        quote_ident(state_table_name)
+      )
       INTO changed_rows;
     ELSIF operation = 'UPDATE' THEN
       RAISE EXCEPTION 'Operation UPDATE for prestress.extract_change without
@@ -107,7 +115,8 @@ AS $$
         diff_query,
         quote_ident(state_table_name),
         quote_ident(table_schema) || '.' ||
-        quote_ident(table_name))
+        quote_ident(table_name)
+      )
       INTO changed_rows;
     END IF;
     RETURN QUERY SELECT
@@ -129,7 +138,8 @@ CREATE FUNCTION prestress.extract_change(
   table_schema NAME,
   table_name NAME,
   operation prestress.operation,
-  key_columns NAME[])
+  key_columns NAME[]
+)
 RETURNS SETOF prestress.change
 LANGUAGE plpgsql
 AS $$
@@ -139,7 +149,7 @@ AS $$
       FROM %s AS a
       WHERE jsonb_build_array(%s) %s (
         SELECT jsonb_build_array(%s) FROM %s AS b)';
-    state_table_name NAME := 'ws_' || subscription_id;
+    state_table_name NAME := 'prestress_state_' || subscription_id;
   BEGIN
     IF operation = 'INSERT' THEN
       EXECUTE format(
@@ -151,7 +161,8 @@ AS $$
         'NOT IN',
         (SELECT string_agg('b.'|| quote_ident(column_name), ',')
           FROM unnest(key_columns) AS column_name),
-        quote_ident(state_table_name))
+        quote_ident(state_table_name)
+      )
       INTO changed_rows;
     ELSIF operation = 'UPDATE' THEN
       EXECUTE format(
@@ -164,7 +175,8 @@ AS $$
         (SELECT string_agg('b.'|| quote_ident(column_name), ',')
           FROM unnest(key_columns) AS column_name),
         quote_ident(state_table_name),
-        quote_ident(state_table_name))
+        quote_ident(state_table_name)
+      )
       INTO changed_rows;
     ELSIF operation = 'DELETE' THEN
       EXECUTE format(
@@ -176,7 +188,8 @@ AS $$
         (SELECT string_agg('b.'|| quote_ident(column_name), ',')
           FROM unnest(key_columns) AS column_name),
         quote_ident(table_schema) || '.' ||
-        quote_ident(table_name))
+        quote_ident(table_name)
+      )
       INTO changed_rows;
     END IF;
     RETURN QUERY SELECT
@@ -196,24 +209,40 @@ $$;
 CREATE FUNCTION prestress.record_state(
   subscription_id BIGINT,
   table_schema NAME,
-  table_name NAME)
+  table_name NAME
+)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
   BEGIN
-    EXECUTE format('CREATE TEMPORARY TABLE %I
+    EXECUTE format(
+      'CREATE TEMPORARY TABLE pg_temp.%I
       ON COMMIT DROP
       AS SELECT * FROM %I.%I',
-      'ws_' || subscription_id,
+      'prestress_state_' || subscription_id,
       table_schema,
-      table_name);
+      table_name
+    );
   END;
 $$;
 
-CREATE FUNCTION prestress.record_changes(
+CREATE FUNCTION prestress.drop_state(subscription_id BIGINT)
+RETURNS VOID
+LANGUAGE plpgsql
+AS $$
+  BEGIN
+    EXECUTE format(
+      'DROP TABLE pg_temp.%I',
+      'prestress_state_' || subscription_id
+    );
+  END;
+$$;
+
+CREATE FUNCTION prestress.record_change(
   subscription_id BIGINT,
   table_schema NAME,
-  table_name NAME)
+  table_name NAME
+)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -240,7 +269,7 @@ AS $$
         pg_attribute.attrelid = table_id;
 
     IF array_length(key_columns, 1) > 0 THEN
-      INSERT INTO prestress.change
+      INSERT INTO pg_temp.prestress_change
       SELECT *
       FROM prestress.extract_change(
         subscription_id,
@@ -265,7 +294,7 @@ AS $$
         'DELETE',
         key_columns);
     ELSE
-      INSERT INTO prestress.change
+      INSERT INTO pg_temp.prestress_change
       SELECT *
       FROM prestress.extract_change(
         subscription_id,
@@ -280,7 +309,6 @@ AS $$
         table_name,
         'DELETE');
     END IF;
-    NOTIFY change;
   END;
 $$;
 
@@ -298,7 +326,8 @@ AS $$
   BEGIN
     EXECUTE format('SET LOCAL ROLE TO %I', role_name);
 
-    EXECUTE format('CREATE FUNCTION pg_temp.%I()
+    EXECUTE format(
+      'CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
       LANGUAGE plpgsql
       SECURITY DEFINER
@@ -310,49 +339,58 @@ AS $$
           RETURN NULL;
         END;
       $s$;',
-      'wb_' || subscription_id,
+      'prestress_before_' || subscription_id,
       authorization_variables,
       subscription_id,
       table_schema,
-      table_name);
+      table_name
+    );
 
-    EXECUTE format('CREATE FUNCTION pg_temp.%I()
+    EXECUTE format(
+      'CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
         BEGIN
           PERFORM prestress.begin_authorized(%L);
-          PERFORM prestress.record_changes(%L, %L, %L);
+          PERFORM prestress.record_change(%L, %L, %L);
+          PERFORM prestress.drop_state(%L);
           PERFORM prestress.end_authorized();
           RETURN NULL;
         END;
       $s$;',
-      'wa_' || subscription_id,
+      'prestress_after_' || subscription_id,
       authorization_variables,
       subscription_id,
       table_schema,
-      table_name);
+      table_name,
+      subscription_id
+    );
 
     EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
-    EXECUTE format('CREATE TRIGGER %I
+    EXECUTE format(
+      'CREATE TRIGGER %I
       BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
       FOR EACH STATEMENT
       EXECUTE FUNCTION pg_temp.%I();',
-      'wb_' || subscription_id,
+      'prestress_before_' || subscription_id,
       table_schema,
       table_name,
-      'wb_' || subscription_id);
+      'prestress_before_' || subscription_id
+    );
 
-    EXECUTE format('CREATE TRIGGER %I
+    EXECUTE format(
+      'CREATE TRIGGER %I
       AFTER INSERT OR UPDATE OR DELETE ON %I.%I
       FOR EACH STATEMENT
       EXECUTE FUNCTION pg_temp.%I();',
-      'wa_' || subscription_id,
+      'prestress_after_' || subscription_id,
       table_schema,
       table_name,
-      'wa_' || subscription_id);
+      'prestress_after_' || subscription_id
+    );
 
     RETURN subscription_id;
   END;
@@ -363,21 +401,27 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
   BEGIN
-    EXECUTE format('DROP FUNCTION pg_temp.%I() CASCADE;',
-      'wb_' || id);
-    EXECUTE format('DROP FUNCTION pg_temp.%I() CASCADE;',
-      'wa_' || id);
+    EXECUTE format(
+      'DROP FUNCTION pg_temp.%I() CASCADE;',
+      'prestress_before_' || id
+    );
+    EXECUTE format(
+      'DROP FUNCTION pg_temp.%I() CASCADE;',
+      'prestress_after_' || id
+    );
   END;
 $$;
 
-GRANT INSERT ON TABLE prestress.change TO public;
 GRANT EXECUTE ON FUNCTION prestress.get_primary_key TO public;
 GRANT EXECUTE ON FUNCTION prestress.get_related_tables TO public;
 GRANT EXECUTE ON FUNCTION prestress.extract_change(
-  BIGINT, NAME, NAME, prestress.operation)
+  BIGINT, NAME, NAME, prestress.operation
+)
 TO public;
 GRANT EXECUTE ON FUNCTION prestress.extract_change(
-  BIGINT, NAME, NAME, prestress.operation, NAME[])
+  BIGINT, NAME, NAME, prestress.operation, NAME[]
+)
 TO public;
 GRANT EXECUTE ON FUNCTION prestress.record_state TO public;
-GRANT EXECUTE ON FUNCTION prestress.record_changes TO public;
+GRANT EXECUTE ON FUNCTION prestress.drop_state TO public;
+GRANT EXECUTE ON FUNCTION prestress.record_change TO public;
