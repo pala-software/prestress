@@ -1,12 +1,12 @@
-package server
+package palakit
 
 import "database/sql"
 
 // TODO: Test
-func (server *Server) connectToDatabase() error {
+func (server *Server) ConnectToDatabase() error {
 	var err error
 
-	server.DB, err = sql.Open("postgres", server.dbConnStr)
+	server.DB, err = sql.Open("postgres", server.DbConnStr)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package server
+package palakit
 
 import (
 	"context"
@@ -27,7 +27,7 @@ func (server Server) listenForChange() {
 		}
 	}
 
-	listener := pq.NewListener(server.dbConnStr, minReconn, maxReconn, reportProblem)
+	listener := pq.NewListener(server.DbConnStr, minReconn, maxReconn, reportProblem)
 	err := listener.Listen("change")
 	if err != nil {
 		log.Fatalln(err)

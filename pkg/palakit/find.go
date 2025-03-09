@@ -1,4 +1,4 @@
-package server
+package palakit
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type FilterMap map[string]string
 
 func (server Server) Find(
 	ctx context.Context,
-	auth authenticationResult,
+	auth AuthenticationResult,
 	schema string,
 	table string,
 	filters FilterMap,
@@ -81,7 +81,7 @@ func (server Server) handleFind(
 		filters[key] = values[0]
 	}
 
-	auth := server.authenticate(writer, request)
+	auth := server.Authenticate(writer, request)
 	if auth == nil {
 		return
 	}

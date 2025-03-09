@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"gitlab.com/pala-ohjelmistot/palakit/internal/server"
+	"gitlab.com/pala-ohjelmistot/palakit/pkg/palakit"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 }
 
 func doStart() {
-	server := server.Server{}
+	server := palakit.NewServer()
 	err := server.Start()
 	if err != nil {
 		log.Fatalln(err)
@@ -31,7 +31,7 @@ func doStart() {
 }
 
 func doMigrate() {
-	server := server.Server{}
+	server := palakit.NewServer()
 	err := server.RunMigrations()
 	if err != nil {
 		log.Fatalln(err)

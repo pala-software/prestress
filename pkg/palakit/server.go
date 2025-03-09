@@ -1,0 +1,47 @@
+package palakit
+
+import (
+	"database/sql"
+	"net/http"
+	"net/url"
+)
+
+type Server struct {
+	// Configuration
+	Environment      Environment
+	DbConnStr        string
+	MigrationDir     string
+	DisableAuth      bool
+	ClientId         string
+	ClientSecret     string
+	IntrospectionUrl *url.URL
+
+	// Connections
+	DB   *sql.DB
+	HTTP *http.Server
+
+	// State
+	subscriptions map[int]*Subscription
+}
+
+// TODO: Test
+func NewServer() Server {
+	server := Server{}
+	server.subscriptions = make(map[int]*Subscription)
+	return server
+}
+
+// TODO: Test
+func (server Server) Start() error {
+	if err := server.ReadConfiguration(); err != nil {
+		return err
+	}
+	if err := server.ConnectToDatabase(); err != nil {
+		return err
+	}
+	go server.listenForChange()
+	if err := server.StartHttpServer(); err != nil {
+		return err
+	}
+	return nil
+}

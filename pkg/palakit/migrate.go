@@ -1,4 +1,4 @@
-package server
+package palakit
 
 import (
 	"database/sql"
@@ -100,12 +100,12 @@ func (server Server) MigratePalakit() error {
 func (server Server) RunMigrations() error {
 	var err error
 
-	err = server.readConfiguration()
+	err = server.ReadConfiguration()
 	if err != nil {
 		return err
 	}
 
-	err = server.connectToDatabase()
+	err = server.ConnectToDatabase()
 	if err != nil {
 		return err
 	}
@@ -115,8 +115,8 @@ func (server Server) RunMigrations() error {
 		return err
 	}
 
-	if server.migrationDir != "" {
-		dir := os.DirFS(server.migrationDir)
+	if server.MigrationDir != "" {
+		dir := os.DirFS(server.MigrationDir)
 		err = server.Migrate("app", dir, false)
 		if err != nil {
 			return err

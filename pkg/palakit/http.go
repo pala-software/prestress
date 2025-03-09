@@ -1,11 +1,11 @@
-package server
+package palakit
 
 import (
 	"net/http"
 )
 
 // TODO: Test
-func (server *Server) startHttpServer() error {
+func (server *Server) StartHttpServer() error {
 	var err error
 
 	mux := http.NewServeMux()

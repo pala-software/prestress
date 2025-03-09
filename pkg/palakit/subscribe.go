@@ -1,4 +1,4 @@
-package server
+package palakit
 
 import (
 	"context"
@@ -14,7 +14,7 @@ type Subscription struct {
 // TODO: Test
 func (server Server) Subscribe(
 	ctx context.Context,
-	auth authenticationResult,
+	auth AuthenticationResult,
 	schema string,
 	table string,
 ) (*Subscription, error) {
@@ -83,7 +83,7 @@ func (server Server) handleSubscription(
 	schema := request.PathValue("schema")
 	table := request.PathValue("table")
 
-	auth := server.authenticate(writer, request)
+	auth := server.Authenticate(writer, request)
 	if auth == nil {
 		return
 	}

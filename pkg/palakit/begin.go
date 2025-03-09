@@ -1,4 +1,4 @@
-package server
+package palakit
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 // TODO: Test
 func (server Server) Begin(
 	ctx context.Context,
-	auth authenticationResult,
+	auth AuthenticationResult,
 	schema string,
 ) (*sql.Tx, error) {
 	var err error

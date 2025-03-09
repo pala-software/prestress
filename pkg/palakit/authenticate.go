@@ -1,4 +1,4 @@
-package server
+package palakit
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 const anonymousRole = "anonymous"
 const authenticatedRole = "authenticated"
 
-type authenticationResult struct {
+type AuthenticationResult struct {
 	// Maybe be empty if user is not recognized (anonymous).
 	Variables map[string]interface{}
 
@@ -23,10 +23,10 @@ type authenticationResult struct {
 // If user can be authenticated from the request, pointer to result is returned.
 // Otherwise response is written and nil is returned.
 // TODO: Test
-func (server Server) authenticate(writer http.ResponseWriter, request *http.Request) *authenticationResult {
+func (server Server) Authenticate(writer http.ResponseWriter, request *http.Request) *AuthenticationResult {
 	authorization := request.Header.Get("Authorization")
-	if server.disableAuth || authorization == "" {
-		return &authenticationResult{
+	if server.DisableAuth || authorization == "" {
+		return &AuthenticationResult{
 			Variables: map[string]interface{}{},
 			Role:      anonymousRole,
 		}
@@ -37,11 +37,11 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 		return nil
 	}
 
-	introspectionUrl := *server.introspectionUrl
+	introspectionUrl := *server.IntrospectionUrl
 	introspectionUrl.RawQuery = url.Values{
 		"token": []string{strings.TrimPrefix(authorization, "Bearer ")},
 	}.Encode()
-	introspectionUrl.User = url.UserPassword(server.clientId, server.clientSecret)
+	introspectionUrl.User = url.UserPassword(server.ClientId, server.ClientSecret)
 	response, err := http.Get(introspectionUrl.String())
 	if err != nil {
 		fmt.Println(err)
@@ -96,7 +96,7 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 		role = authenticatedRole
 	}
 
-	return &authenticationResult{
+	return &AuthenticationResult{
 		Variables: introspection,
 		Role:      role,
 	}

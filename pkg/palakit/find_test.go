@@ -1,16 +1,16 @@
-package server
+package palakit_test
 
 import (
 	"context"
-	"database/sql"
 	"embed"
-	"fmt"
 	"log"
 	"os"
 	"testing"
+
+	"gitlab.com/pala-ohjelmistot/palakit/pkg/palakit"
 )
 
-var server Server
+var server palakit.Server
 
 //go:embed find_test.sql
 var findTestMigrations embed.FS
@@ -18,12 +18,12 @@ var findTestMigrations embed.FS
 func TestMain(m *testing.M) {
 	var err error
 
-	server = Server{}
-	server.environment = Development
-	server.dbConnStr = "dbname=palakit_test"
-	server.disableAuth = true
+	server = palakit.Server{}
+	server.Environment = palakit.Development
+	server.DbConnStr = "dbname=palakit_test"
+	server.DisableAuth = true
 
-	err = server.connectToDatabase()
+	err = server.ConnectToDatabase()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -42,54 +42,15 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func expectValues(rows *sql.Rows, expectedValues []string) error {
-	var err error
-	count := 0
-	for _, expectedValue := range expectedValues {
-		if !rows.Next() {
-			return fmt.Errorf(
-				"expected %d rows, got %d",
-				len(expectedValues),
-				count,
-			)
-		}
-
-		var actualValue string
-		err = rows.Scan(&actualValue)
-		if err != nil {
-			return err
-		}
-
-		if actualValue != expectedValue {
-			return fmt.Errorf(
-				"expected value '%s', got '%s'",
-				expectedValue,
-				actualValue,
-			)
-		}
-
-		count++
-	}
-
-	if rows.Next() {
-		return fmt.Errorf(
-			"expected %d rows, got too many",
-			len(expectedValues),
-		)
-	}
-
-	return nil
-}
-
 func TestFindWithCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	auth := authenticationResult{
+	auth := palakit.AuthenticationResult{
 		Role:      "anonymous",
 		Variables: map[string]interface{}{},
 	}
 	schema := "find_test"
 	table := "test"
-	filters := FilterMap{}
+	filters := palakit.FilterMap{}
 
 	cancel()
 	rows, err := server.Find(ctx, auth, schema, table, filters)
@@ -111,13 +72,13 @@ func TestFindWithCancelledContext(t *testing.T) {
 
 func TestFindAll(t *testing.T) {
 	ctx := context.Background()
-	auth := authenticationResult{
+	auth := palakit.AuthenticationResult{
 		Role:      "anonymous",
 		Variables: map[string]interface{}{},
 	}
 	schema := "find_test"
 	table := "test"
-	filters := FilterMap{}
+	filters := palakit.FilterMap{}
 
 	rows, err := server.Find(ctx, auth, schema, table, filters)
 	if err != nil {
@@ -144,13 +105,13 @@ func TestFindAll(t *testing.T) {
 
 func TestFindWithFilter(t *testing.T) {
 	ctx := context.Background()
-	auth := authenticationResult{
+	auth := palakit.AuthenticationResult{
 		Role:      "anonymous",
 		Variables: map[string]interface{}{},
 	}
 	schema := "find_test"
 	table := "test"
-	filters := FilterMap{
+	filters := palakit.FilterMap{
 		"test": "1",
 	}
 
