@@ -9,6 +9,7 @@ import (
 	"github.com/lib/pq"
 )
 
+// TODO: Test
 func (server Server) Begin(
 	ctx context.Context,
 	auth authenticationResult,

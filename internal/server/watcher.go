@@ -16,6 +16,7 @@ type Change struct {
 	RowData      json.RawMessage `json:"data"`
 }
 
+// TODO: Test
 func (server Server) listenForChange() {
 	minReconn := 10 * time.Second
 	maxReconn := 1 * time.Minute

@@ -2,6 +2,7 @@ package server
 
 import "database/sql"
 
+// TODO: Test
 func (server *Server) connectToDatabase() error {
 	var err error
 

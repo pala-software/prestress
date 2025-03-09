@@ -24,6 +24,7 @@ type Server struct {
 	subscriptions map[int]*Subscription
 }
 
+// TODO: Test
 func (server Server) Start() error {
 	// Initialize state
 	server.subscriptions = make(map[int]*Subscription)

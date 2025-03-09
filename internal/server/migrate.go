@@ -11,6 +11,7 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
+// TODO: Test
 func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 	var err error
 	var initialized sql.NullBool
@@ -85,6 +86,7 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 	return nil
 }
 
+// TODO: Test
 func (server Server) MigratePalakit() error {
 	dir, err := fs.Sub(migrations, "migrations")
 	if err != nil {
@@ -94,6 +96,7 @@ func (server Server) MigratePalakit() error {
 	return server.Migrate("palakit", dir, false)
 }
 
+// TODO: Test
 func (server Server) RunMigrations() error {
 	var err error
 

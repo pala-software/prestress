@@ -13,6 +13,7 @@ const (
 	Production  Environment = "production"
 )
 
+// TODO: Test
 func (env Environment) IsValid() bool {
 	switch env {
 	case Development, Production:
@@ -22,6 +23,7 @@ func (env Environment) IsValid() bool {
 	}
 }
 
+// TODO: Test
 func (server *Server) readConfiguration() error {
 	var err error
 

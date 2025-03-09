@@ -11,6 +11,7 @@ type Subscription struct {
 	Change chan Change
 }
 
+// TODO: Test
 func (server Server) Subscribe(
 	ctx context.Context,
 	auth authenticationResult,
@@ -72,6 +73,7 @@ func (server Server) Subscribe(
 	return subscription, nil
 }
 
+// TODO: Test
 func (server Server) handleSubscription(
 	writer http.ResponseWriter,
 	request *http.Request,

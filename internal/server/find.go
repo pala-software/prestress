@@ -30,7 +30,14 @@ func (server Server) Find(
 
 	var where []string
 	for column, value := range filters {
-		where = append(where, fmt.Sprintf("%s = %s", pq.QuoteIdentifier(column), pq.QuoteLiteral(value)))
+		where = append(
+			where,
+			fmt.Sprintf(
+				"%s = %s",
+				pq.QuoteIdentifier(column),
+				pq.QuoteLiteral(value),
+			),
+		)
 	}
 
 	whereStr := ""
@@ -54,6 +61,7 @@ func (server Server) Find(
 	return rows, nil
 }
 
+// TODO: Test
 func (server Server) handleFind(
 	writer http.ResponseWriter,
 	request *http.Request,

@@ -22,6 +22,7 @@ type authenticationResult struct {
 
 // If user can be authenticated from the request, pointer to result is returned.
 // Otherwise response is written and nil is returned.
+// TODO: Test
 func (server Server) authenticate(writer http.ResponseWriter, request *http.Request) *authenticationResult {
 	authorization := request.Header.Get("Authorization")
 	if server.disableAuth || authorization == "" {

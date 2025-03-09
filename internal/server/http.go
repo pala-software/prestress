@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+// TODO: Test
 func (server *Server) startHttpServer() error {
 	var err error
 

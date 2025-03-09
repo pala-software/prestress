@@ -17,6 +17,7 @@
     enable = true;
     initialDatabases = [
       { name = "palakit"; }
+      { name = "palakit_test"; }
     ];
   };
   processes.palakit = {
