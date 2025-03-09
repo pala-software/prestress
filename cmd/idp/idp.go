@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -63,7 +64,7 @@ func (idp *identityProvider) Prompt() {
 func (idp identityProvider) ListenAndServe() {
 	http.HandleFunc("GET /introspect", idp.handleIntrospection)
 	err := http.ListenAndServe(":8081", nil)
-	panic(err)
+	log.Fatalln(err)
 }
 
 func (idp identityProvider) handleIntrospection(

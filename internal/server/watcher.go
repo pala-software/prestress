@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/lib/pq"
@@ -28,7 +29,7 @@ func (server Server) listenForChange() {
 	listener := pq.NewListener(server.dbConnStr, minReconn, maxReconn, reportProblem)
 	err := listener.Listen("change")
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 
 	for {

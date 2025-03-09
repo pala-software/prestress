@@ -10,6 +10,7 @@ type Server struct {
 	// Configuration
 	environment      Environment
 	dbConnStr        string
+	migrationDir     string
 	disableAuth      bool
 	clientId         string
 	clientSecret     string

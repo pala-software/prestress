@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"gitlab.com/pala-ohjelmistot/palakit/internal/server"
@@ -17,7 +18,7 @@ func main() {
 	case "migrate":
 		doMigrate()
 	default:
-		panic("expected 'start' or 'migrate' subcommands")
+		log.Fatalln("expected 'start' or 'migrate' subcommands")
 	}
 }
 
@@ -25,7 +26,7 @@ func doStart() {
 	server := server.Server{}
 	err := server.Start()
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 }
 
@@ -33,6 +34,6 @@ func doMigrate() {
 	server := server.Server{}
 	err := server.RunMigrations()
 	if err != nil {
-		panic(err)
+		log.Fatalln(err)
 	}
 }

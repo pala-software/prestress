@@ -31,6 +31,7 @@ func (server *Server) readConfiguration() error {
 	}
 
 	server.dbConnStr = os.Getenv("PALAKIT_DB_CONNECTION_STRING")
+	server.migrationDir = os.Getenv("PALAKIT_MIGRATION_DIRECTORY")
 
 	server.disableAuth = os.Getenv("PALAKIT_AUTH_DISABLE") == "1"
 	if server.disableAuth && server.environment != Development {
