@@ -1,4 +1,4 @@
-package palakit_test
+package prestress_test
 
 import (
 	"context"
@@ -7,10 +7,10 @@ import (
 	"os"
 	"testing"
 
-	"gitlab.com/pala-ohjelmistot/palakit/pkg/palakit"
+	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-var server palakit.Server
+var server prestress.Server
 
 //go:embed find_test.sql
 var findTestMigrations embed.FS
@@ -18,9 +18,9 @@ var findTestMigrations embed.FS
 func TestMain(m *testing.M) {
 	var err error
 
-	server = palakit.Server{}
-	server.Environment = palakit.Development
-	server.DbConnStr = "dbname=palakit_test"
+	server = prestress.Server{}
+	server.Environment = prestress.Development
+	server.DbConnStr = "dbname=prestress_test"
 	server.DisableAuth = true
 
 	err = server.ConnectToDatabase()
@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 		log.Fatalln(err)
 	}
 
-	err = server.MigratePalakit()
+	err = server.MigratePrestress()
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -44,13 +44,13 @@ func TestMain(m *testing.M) {
 
 func TestFindWithCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	auth := palakit.AuthenticationResult{
+	auth := prestress.AuthenticationResult{
 		Role:      "anonymous",
 		Variables: map[string]interface{}{},
 	}
 	schema := "find_test"
 	table := "test"
-	filters := palakit.FilterMap{}
+	filters := prestress.FilterMap{}
 
 	cancel()
 	rows, err := server.Find(ctx, auth, schema, table, filters)
@@ -72,13 +72,13 @@ func TestFindWithCancelledContext(t *testing.T) {
 
 func TestFindAll(t *testing.T) {
 	ctx := context.Background()
-	auth := palakit.AuthenticationResult{
+	auth := prestress.AuthenticationResult{
 		Role:      "anonymous",
 		Variables: map[string]interface{}{},
 	}
 	schema := "find_test"
 	table := "test"
-	filters := palakit.FilterMap{}
+	filters := prestress.FilterMap{}
 
 	rows, err := server.Find(ctx, auth, schema, table, filters)
 	if err != nil {
@@ -105,13 +105,13 @@ func TestFindAll(t *testing.T) {
 
 func TestFindWithFilter(t *testing.T) {
 	ctx := context.Background()
-	auth := palakit.AuthenticationResult{
+	auth := prestress.AuthenticationResult{
 		Role:      "anonymous",
 		Variables: map[string]interface{}{},
 	}
 	schema := "find_test"
 	table := "test"
-	filters := palakit.FilterMap{
+	filters := prestress.FilterMap{
 		"test": "1",
 	}
 

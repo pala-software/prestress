@@ -1,4 +1,4 @@
-package palakit_test
+package prestress_test
 
 import (
 	"database/sql"

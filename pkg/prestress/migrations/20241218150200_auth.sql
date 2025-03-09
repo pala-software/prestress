@@ -1,11 +1,4 @@
-CREATE SCHEMA palakit;
-
-CREATE TABLE palakit.database_variable (
-  name TEXT PRIMARY KEY,
-  value TEXT NULL
-);
-
-CREATE FUNCTION palakit.auth(key TEXT)
+CREATE FUNCTION prestress.auth(key TEXT)
 RETURNS TEXT
 LANGUAGE plpgsql
 AS $$
@@ -29,7 +22,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION palakit.begin_authorized(variables jsonb)
+CREATE FUNCTION prestress.begin_authorized(variables jsonb)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -44,7 +37,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION palakit.end_authorized()
+CREATE FUNCTION prestress.end_authorized()
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -53,5 +46,5 @@ AS $$
   END;
 $$;
 
-GRANT USAGE ON SCHEMA palakit TO public;
-GRANT EXECUTE ON FUNCTION palakit.auth TO PUBLIC;
+GRANT USAGE ON SCHEMA prestress TO public;
+GRANT EXECUTE ON FUNCTION prestress.auth TO public;

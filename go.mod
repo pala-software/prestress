@@ -1,4 +1,4 @@
-module gitlab.com/pala-ohjelmistot/palakit
+module gitlab.com/pala-software/prestress
 
 go 1.23
 

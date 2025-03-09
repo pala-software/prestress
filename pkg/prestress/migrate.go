@@ -1,4 +1,4 @@
-package palakit
+package prestress
 
 import (
 	"database/sql"
@@ -18,15 +18,15 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 	err = server.DB.QueryRow(
 		`SELECT TRUE
 		FROM pg_namespace
-		WHERE nspname = 'palakit'`,
+		WHERE nspname = 'prestress'`,
 	).Scan(&initialized)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 
-	if (!initialized.Valid || !initialized.Bool) && target != "palakit" {
+	if (!initialized.Valid || !initialized.Bool) && target != "prestress" {
 		return fmt.Errorf(
-			"cannot migrate %s, initial palakit migration has not been run",
+			"cannot migrate %s, initial prestress migration has not been run",
 			target,
 		)
 	}
@@ -36,7 +36,7 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 		var variable sql.NullString
 		err = server.DB.QueryRow(
 			`SELECT value
-			FROM palakit.database_variable
+			FROM prestress.database_variable
 			WHERE name = $1`,
 			target+"_version",
 		).Scan(&variable)
@@ -73,9 +73,10 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 		}
 
 		_, err = server.DB.Exec(
-			`INSERT INTO palakit.database_variable (name, value)
-			VALUES ('palakit_version', $1)
-			ON CONFLICT (name) DO UPDATE SET value = $1`,
+			`INSERT INTO prestress.database_variable (name, value)
+			VALUES ($1, $2)
+			ON CONFLICT (name) DO UPDATE SET value = $2`,
+			target+"_version",
 			name,
 		)
 		if err != nil {
@@ -87,13 +88,13 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 }
 
 // TODO: Test
-func (server Server) MigratePalakit() error {
+func (server Server) MigratePrestress() error {
 	dir, err := fs.Sub(migrations, "migrations")
 	if err != nil {
 		return err
 	}
 
-	return server.Migrate("palakit", dir, false)
+	return server.Migrate("prestress", dir, false)
 }
 
 // TODO: Test
@@ -110,7 +111,7 @@ func (server Server) RunMigrations() error {
 		return err
 	}
 
-	err = server.MigratePalakit()
+	err = server.MigratePrestress()
 	if err != nil {
 		return err
 	}

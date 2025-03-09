@@ -1,18 +1,16 @@
-CREATE SCHEMA watcher;
-
-CREATE TYPE watcher.operation
+CREATE TYPE prestress.operation
 AS ENUM ('INSERT', 'UPDATE', 'DELETE');
 
-CREATE SEQUENCE subscription_id;
+CREATE SEQUENCE prestress.subscription_id;
 
-CREATE TABLE watcher.change (
+CREATE TABLE prestress.change (
   subscription_id BIGINT NOT NULL,
   row_key JSONB NULL,
   row_data JSONB NOT NULL,
-  row_operation watcher.operation NOT NULL
+  row_operation prestress.operation NOT NULL
 );
 
-CREATE FUNCTION watcher.get_primary_key(
+CREATE FUNCTION prestress.get_primary_key(
   table_schema NAME,
   table_name NAME,
   row_data JSONB)
@@ -51,7 +49,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.get_related_tables(source_schema NAME, source_table NAME)
+CREATE FUNCTION prestress.get_related_tables(source_schema NAME, source_table NAME)
 RETURNS TABLE (table_schema NAME, table_name NAME)
 LANGUAGE sql
 AS $$
@@ -79,12 +77,12 @@ AS $$
   JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace;
 $$;
 
-CREATE FUNCTION watcher.extract_change(
+CREATE FUNCTION prestress.extract_change(
   subscription_id BIGINT,
   table_schema NAME,
   table_name NAME,
-  operation watcher.operation)
-RETURNS SETOF watcher.change
+  operation prestress.operation)
+RETURNS SETOF prestress.change
 LANGUAGE plpgsql
 AS $$
   DECLARE
@@ -102,7 +100,7 @@ AS $$
         quote_ident(state_table_name))
       INTO changed_rows;
     ELSIF operation = 'UPDATE' THEN
-      RAISE EXCEPTION 'Operation UPDATE for watcher.extract_change without
+      RAISE EXCEPTION 'Operation UPDATE for prestress.extract_change without
         key_columns parameter is not implemented';
     ELSIF operation = 'DELETE' THEN
       EXECUTE format(
@@ -114,7 +112,7 @@ AS $$
     END IF;
     RETURN QUERY SELECT
       subscription_id,
-      watcher.get_primary_key(
+      prestress.get_primary_key(
         table_schema,
         table_name,
         row_data)
@@ -126,13 +124,13 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.extract_change(
+CREATE FUNCTION prestress.extract_change(
   subscription_id BIGINT,
   table_schema NAME,
   table_name NAME,
-  operation watcher.operation,
+  operation prestress.operation,
   key_columns NAME[])
-RETURNS SETOF watcher.change
+RETURNS SETOF prestress.change
 LANGUAGE plpgsql
 AS $$
   DECLARE
@@ -183,7 +181,7 @@ AS $$
     END IF;
     RETURN QUERY SELECT
       subscription_id,
-      watcher.get_primary_key(
+      prestress.get_primary_key(
         table_schema,
         table_name,
         row_data)
@@ -195,7 +193,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.record_state(
+CREATE FUNCTION prestress.record_state(
   subscription_id BIGINT,
   table_schema NAME,
   table_name NAME)
@@ -212,7 +210,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.record_changes(
+CREATE FUNCTION prestress.record_changes(
   subscription_id BIGINT,
   table_schema NAME,
   table_name NAME)
@@ -242,9 +240,9 @@ AS $$
         pg_attribute.attrelid = table_id;
 
     IF array_length(key_columns, 1) > 0 THEN
-      INSERT INTO watcher.change
+      INSERT INTO prestress.change
       SELECT *
-      FROM watcher.extract_change(
+      FROM prestress.extract_change(
         subscription_id,
         table_schema,
         table_name,
@@ -252,7 +250,7 @@ AS $$
         key_columns)
       UNION
       SELECT *
-      FROM watcher.extract_change(
+      FROM prestress.extract_change(
         subscription_id,
         table_schema,
         table_name,
@@ -260,23 +258,23 @@ AS $$
         key_columns)
       UNION
       SELECT *
-      FROM watcher.extract_change(
+      FROM prestress.extract_change(
         subscription_id,
         table_schema,
         table_name,
         'DELETE',
         key_columns);
     ELSE
-      INSERT INTO watcher.change
+      INSERT INTO prestress.change
       SELECT *
-      FROM watcher.extract_change(
+      FROM prestress.extract_change(
         subscription_id,
         table_schema,
         table_name,
         'INSERT')
       UNION
       SELECT *
-      FROM watcher.extract_change(
+      FROM prestress.extract_change(
         subscription_id,
         table_schema,
         table_name,
@@ -286,7 +284,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.setup_subscription(
+CREATE FUNCTION prestress.setup_subscription(
   role_name NAME,
   table_schema NAME,
   table_name NAME,
@@ -295,7 +293,7 @@ RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
   DECLARE
-    subscription_id BIGINT := nextval('subscription_id');
+    subscription_id BIGINT := nextval('prestress.subscription_id');
     original_role NAME := CURRENT_USER;
   BEGIN
     EXECUTE format('SET LOCAL ROLE TO %I', role_name);
@@ -306,9 +304,9 @@ AS $$
       SECURITY DEFINER
       AS $s$
         BEGIN
-          PERFORM palakit.begin_authorized(%L);
-          PERFORM watcher.record_state(%L, %L, %L);
-          PERFORM palakit.end_authorized();
+          PERFORM prestress.begin_authorized(%L);
+          PERFORM prestress.record_state(%L, %L, %L);
+          PERFORM prestress.end_authorized();
           RETURN NULL;
         END;
       $s$;',
@@ -324,9 +322,9 @@ AS $$
       SECURITY DEFINER
       AS $s$
         BEGIN
-          PERFORM palakit.begin_authorized(%L);
-          PERFORM watcher.record_changes(%L, %L, %L);
-          PERFORM palakit.end_authorized();
+          PERFORM prestress.begin_authorized(%L);
+          PERFORM prestress.record_changes(%L, %L, %L);
+          PERFORM prestress.end_authorized();
           RETURN NULL;
         END;
       $s$;',
@@ -360,7 +358,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION watcher.teardown_subscription(id BIGINT)
+CREATE FUNCTION prestress.teardown_subscription(id BIGINT)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -372,6 +370,14 @@ AS $$
   END;
 $$;
 
-GRANT USAGE ON SCHEMA watcher TO public;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA watcher TO public;
-GRANT INSERT ON TABLE watcher.change TO public;
+GRANT INSERT ON TABLE prestress.change TO public;
+GRANT EXECUTE ON FUNCTION prestress.get_primary_key TO public;
+GRANT EXECUTE ON FUNCTION prestress.get_related_tables TO public;
+GRANT EXECUTE ON FUNCTION prestress.extract_change(
+  BIGINT, NAME, NAME, prestress.operation)
+TO public;
+GRANT EXECUTE ON FUNCTION prestress.extract_change(
+  BIGINT, NAME, NAME, prestress.operation, NAME[])
+TO public;
+GRANT EXECUTE ON FUNCTION prestress.record_state TO public;
+GRANT EXECUTE ON FUNCTION prestress.record_changes TO public;

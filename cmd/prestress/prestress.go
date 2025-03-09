@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"gitlab.com/pala-ohjelmistot/palakit/pkg/palakit"
+	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 }
 
 func doStart() {
-	server := palakit.NewServer()
+	server := prestress.NewServer()
 	err := server.Start()
 	if err != nil {
 		log.Fatalln(err)
@@ -31,7 +31,7 @@ func doStart() {
 }
 
 func doMigrate() {
-	server := palakit.NewServer()
+	server := prestress.NewServer()
 	err := server.RunMigrations()
 	if err != nil {
 		log.Fatalln(err)

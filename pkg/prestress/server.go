@@ -1,4 +1,4 @@
-package palakit
+package prestress
 
 import (
 	"database/sql"

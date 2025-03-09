@@ -1,4 +1,4 @@
-package palakit
+package prestress
 
 import (
 	"context"
@@ -53,7 +53,7 @@ func (server Server) Begin(
 
 	_, err = tx.ExecContext(
 		ctx,
-		`SELECT palakit.begin_authorized($1)`,
+		`SELECT prestress.begin_authorized($1)`,
 		encodedVariables,
 	)
 	if err != nil {
