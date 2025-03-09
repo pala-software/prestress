@@ -10,19 +10,14 @@ import (
 )
 
 const anonymousRole = "anonymous"
-
-type introspectionResponse struct {
-	Active  bool   `json:"active"`
-	Subject string `json:"sub"`
-	Role    string `json:"role"`
-}
+const authenticatedRole = "authenticated"
 
 type authenticationResult struct {
 	// Maybe be empty if user is not recognized (anonymous).
-	UserId string
+	Token map[string]interface{}
 
 	// Always set to some role name. It's anonymous if user is not authenticated.
-	RoleName string
+	Role string
 }
 
 // If user can be authenticated from the request, pointer to result is returned.
@@ -31,8 +26,8 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 	authorization := request.Header.Get("Authorization")
 	if server.disableAuth || authorization == "" {
 		return &authenticationResult{
-			UserId:   "",
-			RoleName: anonymousRole,
+			Token: map[string]interface{}{},
+			Role:  anonymousRole,
 		}
 	}
 
@@ -64,10 +59,7 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 		return nil
 	}
 
-	introspection := introspectionResponse{
-		Active: false,
-		Role:   "",
-	}
+	introspection := map[string]interface{}{}
 	err = json.Unmarshal(body, &introspection)
 	if err != nil {
 		fmt.Println(err)
@@ -75,15 +67,36 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 		return nil
 	}
 
-	if !introspection.Active ||
-		introspection.Subject == "" ||
-		introspection.Role == "" {
+	active, ok := introspection["active"].(bool)
+	if !ok {
+		fmt.Println("unexpected type of 'active' property on token")
+		writer.WriteHeader(500)
+		return nil
+	}
+
+	if !active {
 		writer.WriteHeader(401)
 		return nil
 	}
 
+	delete(introspection, "active")
+
+	role := ""
+	if _, exists := introspection["role"]; exists {
+		role, ok = introspection["role"].(string)
+		if !ok {
+			fmt.Println("unexpected type of 'role' property on token")
+			writer.WriteHeader(500)
+			return nil
+		}
+	}
+
+	if role == "" {
+		role = authenticatedRole
+	}
+
 	return &authenticationResult{
-		UserId:   introspection.Subject,
-		RoleName: introspection.Role,
+		Token: introspection,
+		Role:  role,
 	}
 }

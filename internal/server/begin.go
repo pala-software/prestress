@@ -37,7 +37,7 @@ func (server Server) Begin(
 		ctx,
 		fmt.Sprintf(
 			"SET LOCAL role TO %s",
-			pq.QuoteLiteral(auth.RoleName),
+			pq.QuoteLiteral(auth.Role),
 		),
 	)
 	if err != nil {
@@ -46,20 +46,30 @@ func (server Server) Begin(
 
 	_, err = tx.ExecContext(
 		ctx,
-		`CREATE TEMPORARY TABLE pg_temp.variable (name TEXT PRIMARY KEY, value TEXT)
+		`CREATE TEMPORARY TABLE pg_temp.authorization_variable
+			(name TEXT PRIMARY KEY, value TEXT)
 		ON COMMIT DROP`,
 	)
 	if err != nil {
 		return tx, err
 	}
 
-	_, err = tx.ExecContext(
+	stmt, err := tx.PrepareContext(
 		ctx,
-		"INSERT INTO pg_temp.variable (name, value) VALUES ('uid', $1)",
-		auth.UserId,
+		`INSERT INTO pg_temp.authorization_variable
+			(name, value)
+		VALUES 
+			($1, $2)`,
 	)
 	if err != nil {
 		return tx, err
+	}
+
+	for name, value := range auth.Token {
+		_, err = stmt.ExecContext(ctx, name, value)
+		if err != nil {
+			return tx, err
+		}
 	}
 
 	return tx, nil

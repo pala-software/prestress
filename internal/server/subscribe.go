@@ -33,7 +33,7 @@ func (server Server) Subscribe(
 	err = conn.QueryRowContext(
 		ctx,
 		"SELECT watcher.setup_subscription($1, $2, $3)",
-		auth.RoleName,
+		auth.Role,
 		schema,
 		table,
 	).Scan(&subId)

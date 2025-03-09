@@ -26,7 +26,7 @@ func (server Server) RunMigrations() error {
 	err = server.DB.QueryRow(
 		`SELECT TRUE
 		FROM pg_namespace
-		WHERE nspname = 'meta'`,
+		WHERE nspname = 'palakit'`,
 	).Scan(&initialized)
 	if err != nil && err != sql.ErrNoRows {
 		return err
@@ -37,8 +37,8 @@ func (server Server) RunMigrations() error {
 		var variable sql.NullString
 		err = server.DB.QueryRow(
 			`SELECT value
-			FROM meta.variable
-			WHERE name = 'database_version'`,
+			FROM palakit.database_variable
+			WHERE name = 'palakit_version'`,
 		).Scan(&variable)
 		if err != nil {
 			return err
@@ -73,8 +73,8 @@ func (server Server) RunMigrations() error {
 		}
 
 		_, err = server.DB.Query(
-			`INSERT INTO meta.variable (name, value)
-			VALUES ('database_version', $1)
+			`INSERT INTO palakit.database_variable (name, value)
+			VALUES ('palakit_version', $1)
 			ON CONFLICT (name) DO UPDATE SET value = $1`,
 			name,
 		)

@@ -2,9 +2,9 @@ CREATE SCHEMA test;
 
 CREATE TABLE test.document (
   id SERIAL PRIMARY KEY,
-  body TEXT,
-  owner TEXT,
-  public BOOLEAN
+  body TEXT NOT NULL,
+  owner TEXT NOT NULL,
+  public BOOLEAN NOT NULL
 );
 
 ALTER TABLE test.document ENABLE ROW LEVEL SECURITY; 
@@ -17,11 +17,11 @@ USING (public = TRUE);
 CREATE POLICY "Owner can see their own documents"
 ON test.document
 FOR SELECT
-USING (owner = auth.uid());
+USING (owner = (palakit.auth('sub')));
 
 CREATE VIEW test.owned_document
 WITH ( security_invoker = TRUE )
-AS SELECT * FROM test.document WHERE owner = auth.uid();
+AS SELECT * FROM test.document WHERE owner = palakit.auth('sub');
 
 CREATE VIEW test.private_document
 WITH ( security_invoker = TRUE )
