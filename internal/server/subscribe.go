@@ -8,7 +8,6 @@ import (
 )
 
 type Subscription struct {
-	Id     int
 	Change chan Change
 }
 
@@ -45,7 +44,6 @@ func (server Server) Subscribe(
 	}
 
 	subscription := &Subscription{
-		Id:     subId,
 		Change: make(chan Change),
 	}
 	server.subscriptions[subId] = subscription
