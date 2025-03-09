@@ -57,7 +57,7 @@ func (server Server) Subscribe(
 		if err != nil {
 			fmt.Println(err)
 		}
-		server.subscriptions[subId] = nil
+		delete(server.subscriptions, subId)
 		conn.Close()
 		cancel()
 	})
