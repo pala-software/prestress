@@ -289,7 +289,8 @@ $$;
 CREATE FUNCTION watcher.setup_subscription(
   role_name NAME,
   table_schema NAME,
-  table_name NAME)
+  table_name NAME,
+  authorization_variables jsonb)
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
@@ -305,11 +306,14 @@ AS $$
       SECURITY DEFINER
       AS $s$
         BEGIN
+          PERFORM palakit.begin_authorized(%L);
           PERFORM watcher.record_state(%L, %L, %L);
+          PERFORM palakit.end_authorized();
           RETURN NULL;
         END;
       $s$;',
       'wb_' || subscription_id,
+      authorization_variables,
       subscription_id,
       table_schema,
       table_name);
@@ -320,11 +324,14 @@ AS $$
       SECURITY DEFINER
       AS $s$
         BEGIN
+          PERFORM palakit.begin_authorized(%L);
           PERFORM watcher.record_changes(%L, %L, %L);
+          PERFORM palakit.end_authorized();
           RETURN NULL;
         END;
       $s$;',
       'wa_' || subscription_id,
+      authorization_variables,
       subscription_id,
       table_schema,
       table_name);

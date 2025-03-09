@@ -24,6 +24,12 @@ func (server Server) Subscribe(
 
 	conn, err := server.DB.Conn(subCtx)
 	if err != nil {
+		cancel()
+		return nil, err
+	}
+
+	encodedVariables, err := json.Marshal(auth.Variables)
+	if err != nil {
 		conn.Close()
 		cancel()
 		return nil, err
@@ -32,10 +38,11 @@ func (server Server) Subscribe(
 	var subId int
 	err = conn.QueryRowContext(
 		ctx,
-		"SELECT watcher.setup_subscription($1, $2, $3)",
+		"SELECT watcher.setup_subscription($1, $2, $3, $4)",
 		auth.Role,
 		schema,
 		table,
+		encodedVariables,
 	).Scan(&subId)
 	if err != nil {
 		conn.Close()

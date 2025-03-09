@@ -14,7 +14,7 @@ const authenticatedRole = "authenticated"
 
 type authenticationResult struct {
 	// Maybe be empty if user is not recognized (anonymous).
-	Token map[string]interface{}
+	Variables map[string]interface{}
 
 	// Always set to some role name. It's anonymous if user is not authenticated.
 	Role string
@@ -26,8 +26,8 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 	authorization := request.Header.Get("Authorization")
 	if server.disableAuth || authorization == "" {
 		return &authenticationResult{
-			Token: map[string]interface{}{},
-			Role:  anonymousRole,
+			Variables: map[string]interface{}{},
+			Role:      anonymousRole,
 		}
 	}
 
@@ -96,7 +96,7 @@ func (server Server) authenticate(writer http.ResponseWriter, request *http.Requ
 	}
 
 	return &authenticationResult{
-		Token: introspection,
-		Role:  role,
+		Variables: introspection,
+		Role:      role,
 	}
 }

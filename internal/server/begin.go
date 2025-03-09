@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/lib/pq"
@@ -44,32 +45,18 @@ func (server Server) Begin(
 		return tx, err
 	}
 
+	encodedVariables, err := json.Marshal(auth.Variables)
+	if err != nil {
+		return tx, err
+	}
+
 	_, err = tx.ExecContext(
 		ctx,
-		`CREATE TEMPORARY TABLE pg_temp.authorization_variable
-			(name TEXT PRIMARY KEY, value TEXT)
-		ON COMMIT DROP`,
+		`SELECT palakit.begin_authorized($1)`,
+		encodedVariables,
 	)
 	if err != nil {
 		return tx, err
-	}
-
-	stmt, err := tx.PrepareContext(
-		ctx,
-		`INSERT INTO pg_temp.authorization_variable
-			(name, value)
-		VALUES 
-			($1, $2)`,
-	)
-	if err != nil {
-		return tx, err
-	}
-
-	for name, value := range auth.Token {
-		_, err = stmt.ExecContext(ctx, name, value)
-		if err != nil {
-			return tx, err
-		}
 	}
 
 	return tx, nil
