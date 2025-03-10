@@ -1,9 +1,10 @@
 package prestress
 
 import (
-	"database/sql"
 	"net/http"
 	"net/url"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
@@ -17,7 +18,7 @@ type Server struct {
 	IntrospectionUrl *url.URL
 
 	// Connections
-	DB   *sql.DB
+	DB   *pgxpool.Pool
 	HTTP *http.Server
 
 	// State

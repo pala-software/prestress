@@ -2,14 +2,13 @@ package prestress
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
+	"strconv"
 	"strings"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 )
 
 type FilterMap map[string]string
@@ -20,7 +19,7 @@ func (server Server) Find(
 	schema string,
 	table string,
 	filters FilterMap,
-) (*sql.Rows, error) {
+) (pgx.Rows, error) {
 	var err error
 
 	tx, err := server.Begin(ctx, auth, schema)
@@ -29,15 +28,17 @@ func (server Server) Find(
 	}
 
 	var where []string
-	for column, value := range filters {
+	n := 1
+	for column := range filters {
 		where = append(
 			where,
 			fmt.Sprintf(
 				"%s = %s",
-				pq.QuoteIdentifier(column),
-				pq.QuoteLiteral(value),
+				pgx.Identifier{column}.Sanitize(),
+				"$"+strconv.Itoa(n),
 			),
 		)
+		n++
 	}
 
 	whereStr := ""
@@ -45,14 +46,19 @@ func (server Server) Find(
 		whereStr = "WHERE " + strings.Join(where, " AND ")
 	}
 
-	rows, err := tx.QueryContext(
+	values := make([]any, 0, len(filters))
+	for _, value := range filters {
+		values = append(values, value)
+	}
+
+	rows, err := tx.Query(
 		ctx,
 		fmt.Sprintf(
-			"SELECT * FROM %s.%s %s",
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(table),
+			"SELECT * FROM %s %s",
+			pgx.Identifier{schema, table}.Sanitize(),
 			whereStr,
 		),
+		values...,
 	)
 	if err != nil {
 		return rows, err
@@ -98,37 +104,22 @@ func (server Server) handleFind(
 		return
 	}
 
+	columns := rows.FieldDescriptions()
+
+	row := make(map[string]any, len(columns))
 	defer rows.Close()
-
-	columns, err := rows.ColumnTypes()
-	if err != nil {
-		fmt.Println(err)
-		writer.WriteHeader(500)
-		return
-	}
-
-	values := make([]interface{}, len(columns))
-	for index, column := range columns {
-		values[index] = reflect.New(column.ScanType())
-	}
-
-	scanArgs := make([]interface{}, len(columns))
-	for index := range columns {
-		scanArgs[index] = &values[index]
-	}
-
-	result := make(map[string]interface{}, len(columns))
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
+		values, err := rows.Values()
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
 
 		for index, column := range columns {
-			result[column.Name()] = values[index]
+			row[column.Name] = values[index]
 		}
-		encodedRow, err := json.Marshal(result)
+
+		encodedRow, err := json.Marshal(row)
 		if err != nil {
 			fmt.Println(err)
 			return

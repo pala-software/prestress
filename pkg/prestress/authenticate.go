@@ -15,7 +15,7 @@ const authenticatedRole = "authenticated"
 
 type AuthenticationResult struct {
 	// Maybe be empty if user is not recognized (anonymous).
-	Variables map[string]interface{}
+	Variables map[string]any
 
 	// Always set to some role name. It's anonymous if user is not authenticated.
 	Role string
@@ -28,7 +28,7 @@ func (server Server) Authenticate(writer http.ResponseWriter, request *http.Requ
 	authorization := request.Header.Get("Authorization")
 	if server.DisableAuth || authorization == "" {
 		return &AuthenticationResult{
-			Variables: map[string]interface{}{},
+			Variables: map[string]any{},
 			Role:      anonymousRole,
 		}
 	}
@@ -61,7 +61,7 @@ func (server Server) Authenticate(writer http.ResponseWriter, request *http.Requ
 		return nil
 	}
 
-	introspection := map[string]interface{}{}
+	var introspection map[string]any
 	err = json.Unmarshal(body, &introspection)
 	if err != nil {
 		fmt.Println(err)

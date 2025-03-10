@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 )
 
 // TODO: Test
@@ -18,7 +18,7 @@ func (server Server) Create(
 	auth AuthenticationResult,
 	schema string,
 	table string,
-	data map[string]interface{},
+	data map[string]any,
 ) error {
 	var err error
 
@@ -28,12 +28,11 @@ func (server Server) Create(
 	}
 
 	if len(data) == 0 {
-		_, err = tx.ExecContext(
+		_, err = tx.Exec(
 			ctx,
 			fmt.Sprintf(
-				"INSERT INTO %s.%s DEFAULT VALUES",
-				pq.QuoteIdentifier(schema),
-				pq.QuoteIdentifier(table),
+				"INSERT INTO %s DEFAULT VALUES",
+				pgx.Identifier{schema, table}.Sanitize(),
 			),
 		)
 		if err != nil {
@@ -41,22 +40,21 @@ func (server Server) Create(
 		}
 	} else {
 		columns := make([]string, 0, len(data))
-		values := make([]interface{}, 0, len(data))
+		values := make([]any, 0, len(data))
 		placeholders := make([]string, 0, len(data))
 		n := 1
 		for key, value := range data {
-			columns = append(columns, pq.QuoteIdentifier(key))
+			columns = append(columns, pgx.Identifier{key}.Sanitize())
 			values = append(values, value)
 			placeholders = append(placeholders, "$"+strconv.Itoa(n))
 			n++
 		}
 
-		_, err = tx.ExecContext(
+		_, err = tx.Exec(
 			ctx,
 			fmt.Sprintf(
-				"INSERT INTO %s.%s (%s) VALUES (%s)",
-				pq.QuoteIdentifier(schema),
-				pq.QuoteIdentifier(table),
+				"INSERT INTO %s (%s) VALUES (%s)",
+				pgx.Identifier{schema, table}.Sanitize(),
 				strings.Join(columns, ", "),
 				strings.Join(placeholders, ", "),
 			),
@@ -67,7 +65,7 @@ func (server Server) Create(
 		}
 	}
 
-	err = tx.Commit()
+	err = tx.Commit(ctx)
 	if err != nil {
 		return err
 	}
@@ -102,7 +100,7 @@ func (server Server) handleCreate(
 		return
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 	err = json.Unmarshal(msg, &data)
 	if err != nil {
 		fmt.Println(err)

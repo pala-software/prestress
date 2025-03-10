@@ -1,18 +1,16 @@
 package prestress
 
-import "database/sql"
+import (
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 // TODO: Test
 func (server *Server) ConnectToDatabase() error {
 	var err error
 
-	server.DB, err = sql.Open("postgres", server.DbConnStr)
-	if err != nil {
-		return err
-	}
-
-	// Test database connection.
-	err = server.DB.Ping()
+	server.DB, err = pgxpool.New(context.Background(), server.DbConnStr)
 	if err != nil {
 		return err
 	}

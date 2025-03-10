@@ -46,7 +46,7 @@ func TestFindWithCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	auth := prestress.AuthenticationResult{
 		Role:      "anonymous",
-		Variables: map[string]interface{}{},
+		Variables: map[string]any{},
 	}
 	schema := "find_test"
 	table := "test"
@@ -74,7 +74,7 @@ func TestFindAll(t *testing.T) {
 	ctx := context.Background()
 	auth := prestress.AuthenticationResult{
 		Role:      "anonymous",
-		Variables: map[string]interface{}{},
+		Variables: map[string]any{},
 	}
 	schema := "find_test"
 	table := "test"
@@ -90,13 +90,8 @@ func TestFindAll(t *testing.T) {
 		return
 	}
 
+	defer rows.Close()
 	err = expectValues(rows, []string{"1", "2"})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = rows.Close()
 	if err != nil {
 		t.Error(err)
 		return
@@ -107,7 +102,7 @@ func TestFindWithFilter(t *testing.T) {
 	ctx := context.Background()
 	auth := prestress.AuthenticationResult{
 		Role:      "anonymous",
-		Variables: map[string]interface{}{},
+		Variables: map[string]any{},
 	}
 	schema := "find_test"
 	table := "test"
@@ -125,13 +120,8 @@ func TestFindWithFilter(t *testing.T) {
 		return
 	}
 
+	defer rows.Close()
 	err = expectValues(rows, []string{"1"})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	err = rows.Close()
 	if err != nil {
 		t.Error(err)
 		return

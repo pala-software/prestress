@@ -1,11 +1,12 @@
 package prestress_test
 
 import (
-	"database/sql"
 	"fmt"
+
+	"github.com/jackc/pgx/v5"
 )
 
-func expectValues(rows *sql.Rows, expectedValues []string) error {
+func expectValues(rows pgx.Rows, expectedValues []string) error {
 	var err error
 	count := 0
 	for _, expectedValue := range expectedValues {

@@ -1,17 +1,17 @@
 package prestress
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 // TODO: Test
 func handleOperationError(writer http.ResponseWriter, err error) {
 	switch err {
-	case sql.ErrNoRows:
+	case pgx.ErrNoRows:
 		writer.WriteHeader(200)
 		return
 	case ErrForbiddenSchema:
@@ -19,8 +19,8 @@ func handleOperationError(writer http.ResponseWriter, err error) {
 		return
 	}
 
-	if err, ok := err.(*pq.Error); ok {
-		switch err.Code.Class() {
+	if err, ok := err.(*pgconn.PgError); ok {
+		switch err.Code[0:2] {
 		case "23":
 			writer.WriteHeader(400)
 			writer.Write([]byte(err.Message))

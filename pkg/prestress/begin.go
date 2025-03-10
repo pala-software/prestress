@@ -2,12 +2,11 @@ package prestress
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 )
 
 var ErrForbiddenSchema = errors.New("forbidden schema")
@@ -17,36 +16,36 @@ func (server Server) Begin(
 	ctx context.Context,
 	auth AuthenticationResult,
 	schema string,
-) (*sql.Tx, error) {
+) (pgx.Tx, error) {
 	var err error
 
 	if schema == "pg_temp" {
 		return nil, ErrForbiddenSchema
 	}
 
-	tx, err := server.DB.BeginTx(ctx, nil)
+	tx, err := server.DB.Begin(ctx)
 	if err != nil {
 		return tx, err
 	}
 
-	_, err = tx.ExecContext(
+	_, err = tx.Exec(
 		ctx,
 		fmt.Sprintf(
 			// pg_temp is set to last in search_path so that we don't accidentally or
 			// in any case query temporary tables implicitly.
-			"SET LOCAL search_path TO %s, 'pg_temp'",
-			pq.QuoteLiteral(schema),
+			"SET LOCAL search_path TO %s, pg_temp",
+			pgx.Identifier{schema}.Sanitize(),
 		),
 	)
 	if err != nil {
 		return tx, err
 	}
 
-	_, err = tx.ExecContext(
+	_, err = tx.Exec(
 		ctx,
 		fmt.Sprintf(
 			"SET LOCAL role TO %s",
-			pq.QuoteLiteral(auth.Role),
+			pgx.Identifier{auth.Role}.Sanitize(),
 		),
 	)
 	if err != nil {
@@ -58,7 +57,7 @@ func (server Server) Begin(
 		return tx, err
 	}
 
-	_, err = tx.ExecContext(
+	_, err = tx.Exec(
 		ctx,
 		`SELECT prestress.begin_authorized($1)`,
 		encodedVariables,

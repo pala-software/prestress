@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5"
 )
 
 type Change struct {
@@ -33,22 +33,22 @@ func (server Server) Subscribe(
 		return nil, err
 	}
 
-	_, err = tx.ExecContext(
+	_, err = tx.Exec(
 		ctx,
 		fmt.Sprintf(
-			"SELECT 1 FROM %s.%s",
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(table),
+			"SELECT 1 FROM %s",
+			pgx.Identifier{schema, table}.Sanitize(),
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	tx.Rollback(ctx)
 	baseCtx := context.WithoutCancel(ctx)
 	subCtx, cancel := context.WithCancel(baseCtx)
 
-	conn, err := server.DB.Conn(subCtx)
+	conn, err := server.DB.Acquire(subCtx)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -56,14 +56,14 @@ func (server Server) Subscribe(
 
 	encodedVariables, err := json.Marshal(auth.Variables)
 	if err != nil {
-		conn.Close()
+		conn.Release()
 		cancel()
 		return nil, err
 	}
 
 	var subId int
-	err = conn.QueryRowContext(
-		ctx,
+	err = server.DB.QueryRow(
+		subCtx,
 		"SELECT prestress.setup_subscription($1, $2, $3, $4)",
 		auth.Role,
 		schema,
@@ -71,7 +71,7 @@ func (server Server) Subscribe(
 		encodedVariables,
 	).Scan(&subId)
 	if err != nil {
-		conn.Close()
+		conn.Release()
 		cancel()
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (server Server) Subscribe(
 	server.subscriptions[subId] = subscription
 
 	context.AfterFunc(ctx, func() {
-		_, err := conn.ExecContext(
+		_, err := server.DB.Exec(
 			subCtx,
 			"SELECT prestress.teardown_subscription($1)",
 			subId,
@@ -91,7 +91,7 @@ func (server Server) Subscribe(
 			fmt.Println(err)
 		}
 		delete(server.subscriptions, subId)
-		conn.Close()
+		conn.Release()
 		cancel()
 	})
 

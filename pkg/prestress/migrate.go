@@ -1,11 +1,14 @@
 package prestress
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
 	"io/fs"
 	"os"
+
+	"github.com/jackc/pgx/v5"
 )
 
 //go:embed migrations/*.sql
@@ -14,17 +17,20 @@ var migrations embed.FS
 // TODO: Test
 func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 	var err error
-	var initialized sql.NullBool
+	ctx := context.Background()
+
+	var initialized *bool
 	err = server.DB.QueryRow(
+		ctx,
 		`SELECT TRUE
 		FROM pg_namespace
 		WHERE nspname = 'prestress'`,
 	).Scan(&initialized)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && err != pgx.ErrNoRows {
 		return err
 	}
 
-	if (!initialized.Valid || !initialized.Bool) && target != "prestress" {
+	if (initialized == nil || !*initialized) && target != "prestress" {
 		return fmt.Errorf(
 			"cannot migrate %s, initial prestress migration has not been run",
 			target,
@@ -32,15 +38,16 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 	}
 
 	version := ""
-	if initialized.Valid && initialized.Bool {
+	if initialized != nil && *initialized {
 		var variable sql.NullString
 		err = server.DB.QueryRow(
+			ctx,
 			`SELECT value
 			FROM prestress.database_variable
 			WHERE name = $1`,
 			target+"_version",
 		).Scan(&variable)
-		if err != nil && err != sql.ErrNoRows {
+		if err != nil && err != pgx.ErrNoRows {
 			return err
 		}
 
@@ -67,12 +74,13 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 		}
 
 		fmt.Printf("Running migration %s...\n", name)
-		_, err = server.DB.Exec(string(migration))
+		_, err = server.DB.Exec(ctx, string(migration))
 		if err != nil {
 			return err
 		}
 
 		_, err = server.DB.Exec(
+			ctx,
 			`INSERT INTO prestress.database_variable (name, value)
 			VALUES ($1, $2)
 			ON CONFLICT (name) DO UPDATE SET value = $2`,
