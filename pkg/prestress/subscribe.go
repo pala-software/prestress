@@ -184,6 +184,7 @@ func (server Server) collectChanges(ctx context.Context, tx pgx.Tx) error {
 		return err
 	}
 
+	defer rows.Close()
 	var subId int
 	var change Change
 	for rows.Next() {
