@@ -11,9 +11,15 @@
 - [x] Forbid subscribing on unauthorized tables
 - [x] Handle errors better
 - [x] Create operation
-- [ ] Pass on pg_temp.prestress_change to subscriber on mutation operations
-- [ ] Fix view subscription
+- [x] Pass on pg_temp.prestress_change to subscriber on mutation operations
+- [x] Fix view subscription
+- [x] Fix teardown_subscription error
 - [ ] Update operation
 - [ ] Delete operation
+- [ ] Pagination
+- [ ] API documentation
+- [ ] Schema and table discovery endpoints
+- [ ] Docker container images
+- [ ] Improve development environment and enable devcontainer
 - [ ] Improve test coverage
 - [ ] CI for tests and coverage
