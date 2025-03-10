@@ -1,4 +1,5 @@
 {
   "cSpell.diagnosticLevel": "Hint",
-  "direnv.watchForChanges": false
+  "direnv.watchForChanges": false,
+  "cSpell.words": ["pgxpool"]
 }
