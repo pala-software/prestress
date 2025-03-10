@@ -16,7 +16,7 @@
 - [x] Fix teardown_subscription error
 - [x] Update operation
 - [x] Delete operation
-- [ ] Pagination
+- [x] Pagination
 - [ ] API documentation
 - [ ] Schema and table discovery endpoints
 - [ ] Docker container images
