@@ -44,7 +44,11 @@ func (server Server) Subscribe(
 		return nil, err
 	}
 
-	tx.Rollback(ctx)
+	err = tx.Rollback(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	baseCtx := context.WithoutCancel(ctx)
 	subCtx, cancel := context.WithCancel(baseCtx)
 

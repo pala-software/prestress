@@ -25,7 +25,7 @@ AS $$
   BEGIN
     SELECT pg_class.oid
       INTO table_id
-      FROM pg_class
+      FROM pg_catalog.pg_class
       JOIN pg_namespace
       ON pg_namespace.oid = pg_class.relnamespace
       WHERE
@@ -33,7 +33,7 @@ AS $$
         pg_class.relname = get_primary_key.table_name;
     SELECT array_agg(pg_attribute.attname)
       INTO key_columns
-      FROM pg_index
+      FROM pg_catalog.pg_index
       JOIN pg_attribute
       ON pg_attribute.attnum = ANY (pg_index.indkey)
       WHERE
@@ -52,7 +52,7 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION prestress.get_related_tables(
+CREATE OR REPLACE FUNCTION prestress.get_related_tables(
   source_schema NAME,
   source_table NAME
 )
@@ -61,26 +61,27 @@ LANGUAGE sql
 AS $$
   WITH RECURSIVE tab(table_id) AS (
     SELECT pg_class.oid AS table_id
-    FROM pg_class
+    FROM pg_catalog.pg_class
     JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
     WHERE
       pg_class.relname = source_table AND
       pg_namespace.nspname = source_schema
     UNION
-    SELECT pg_class.oid AS table_id
+    SELECT pg_depend.refobjid AS table_id
     FROM tab
-    JOIN pg_depend ON pg_depend.refobjid = table_id
-    LEFT JOIN pg_policy ON pg_policy.oid = pg_depend.objid
-    LEFT JOIN pg_rewrite ON pg_rewrite.oid = pg_depend.objid
-    JOIN pg_class ON
-      pg_class.oid = pg_policy.polrelid OR
-      pg_class.oid = pg_rewrite.ev_class)
+    LEFT JOIN pg_policy ON pg_policy.polrelid = tab.table_id
+    LEFT JOIN pg_rewrite ON pg_rewrite.ev_class = tab.table_id
+    JOIN pg_depend ON
+      pg_depend.objid = pg_policy.oid OR
+      pg_depend.objid = pg_rewrite.oid
+  )
   SELECT
     pg_namespace.nspname AS table_schema,
     pg_class.relname AS table_name
   FROM tab
   JOIN pg_class ON pg_class.oid = tab.table_id
-  JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace;
+  JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
+  WHERE pg_class.relkind = 'r';
 $$;
 
 CREATE FUNCTION prestress.extract_change(
@@ -94,9 +95,9 @@ LANGUAGE plpgsql
 AS $$
   DECLARE
     changed_rows JSONB[];
-    diff_query TEXT := 'SELECT array_agg(to_jsonb(a))
+    diff_query TEXT := 'SELECT array_agg(to_jsonb(a.*))
       FROM %s AS a
-      WHERE a NOT IN (SELECT b FROM %s AS b)';
+      WHERE (SELECT ROW(a.*)) NOT IN (SELECT ROW(b.*) FROM %s AS b)';
     state_table_name NAME := 'prestress_state_' || subscription_id;
   BEGIN
     IF operation = 'INSERT' THEN
@@ -104,7 +105,7 @@ AS $$
         diff_query,
         quote_ident(table_schema) || '.' ||
         quote_ident(table_name),
-        quote_ident(state_table_name)
+        'pg_temp.' || quote_ident(state_table_name)
       )
       INTO changed_rows;
     ELSIF operation = 'UPDATE' THEN
@@ -113,7 +114,7 @@ AS $$
     ELSIF operation = 'DELETE' THEN
       EXECUTE format(
         diff_query,
-        quote_ident(state_table_name),
+        'pg_temp.' || quote_ident(state_table_name),
         quote_ident(table_schema) || '.' ||
         quote_ident(table_name)
       )
@@ -145,7 +146,7 @@ LANGUAGE plpgsql
 AS $$
   DECLARE
     changed_rows JSONB[];
-    diff_query TEXT := 'SELECT array_agg(to_jsonb(a))
+    diff_query TEXT := 'SELECT array_agg(to_jsonb(a.*))
       FROM %s AS a
       WHERE jsonb_build_array(%s) %s (
         SELECT jsonb_build_array(%s) FROM %s AS b)';
@@ -161,12 +162,13 @@ AS $$
         'NOT IN',
         (SELECT string_agg('b.'|| quote_ident(column_name), ',')
           FROM unnest(key_columns) AS column_name),
-        quote_ident(state_table_name)
+        'pg_temp.' || quote_ident(state_table_name)
       )
       INTO changed_rows;
     ELSIF operation = 'UPDATE' THEN
       EXECUTE format(
-        diff_query || ' AND a NOT IN (SELECT b FROM %s AS b)',
+        diff_query ||
+          ' AND (SELECT ROW(a.*)) NOT IN (SELECT ROW(b.*) FROM %s AS b)',
         quote_ident(table_schema) || '.' ||
         quote_ident(table_name),
         (SELECT string_agg('a.'|| quote_ident(column_name), ',')
@@ -174,8 +176,8 @@ AS $$
         'IN',
         (SELECT string_agg('b.'|| quote_ident(column_name), ',')
           FROM unnest(key_columns) AS column_name),
-        quote_ident(state_table_name),
-        quote_ident(state_table_name)
+        'pg_temp.' || quote_ident(state_table_name),
+        'pg_temp.' || quote_ident(state_table_name)
       )
       INTO changed_rows;
     ELSIF operation = 'DELETE' THEN
@@ -252,7 +254,7 @@ AS $$
   BEGIN
     SELECT pg_class.oid
       INTO table_id
-      FROM pg_class
+      FROM pg_catalog.pg_class
       JOIN pg_namespace
       ON pg_namespace.oid = pg_class.relnamespace
       WHERE
@@ -260,7 +262,7 @@ AS $$
         pg_class.relname = table_name;
     SELECT array_agg(pg_attribute.attname)
       INTO key_columns
-      FROM pg_index
+      FROM pg_catalog.pg_index
       JOIN pg_attribute
       ON pg_attribute.attnum = ANY (pg_index.indkey)
       WHERE
@@ -323,6 +325,9 @@ AS $$
   DECLARE
     subscription_id BIGINT := nextval('prestress.subscription_id');
     original_role NAME := CURRENT_USER;
+    target_schema NAME;
+    target_table NAME;
+    trigger_id BIGINT := 1;
   BEGIN
     EXECUTE format('SET LOCAL ROLE TO %I', role_name);
 
@@ -370,27 +375,37 @@ AS $$
 
     EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
-    EXECUTE format(
-      'CREATE TRIGGER %I
-      BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
-      FOR EACH STATEMENT
-      EXECUTE FUNCTION pg_temp.%I();',
-      'prestress_before_' || subscription_id,
-      table_schema,
-      table_name,
-      'prestress_before_' || subscription_id
-    );
+    FOR target_schema, target_table IN
+      SELECT related_table.table_schema, related_table.table_name
+      FROM prestress.get_related_tables(table_schema, table_name)
+      AS related_table
+    LOOP
+      RAISE NOTICE '%s.%s', target_schema, target_table;
 
-    EXECUTE format(
-      'CREATE TRIGGER %I
-      AFTER INSERT OR UPDATE OR DELETE ON %I.%I
-      FOR EACH STATEMENT
-      EXECUTE FUNCTION pg_temp.%I();',
-      'prestress_after_' || subscription_id,
-      table_schema,
-      table_name,
-      'prestress_after_' || subscription_id
-    );
+      EXECUTE format(
+        'CREATE TRIGGER %I
+        BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION pg_temp.%I();',
+        'prestress_before_' || subscription_id || '_' || trigger_id,
+        target_schema,
+        target_table,
+        'prestress_before_' || subscription_id
+      );
+
+      EXECUTE format(
+        'CREATE TRIGGER %I
+        AFTER INSERT OR UPDATE OR DELETE ON %I.%I
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION pg_temp.%I();',
+        'prestress_after_' || subscription_id || '_' || trigger_id,
+        target_schema,
+        target_table,
+        'prestress_after_' || subscription_id
+      );
+
+      SELECT trigger_id + 1 INTO trigger_id;
+    END LOOP;
 
     RETURN subscription_id;
   END;
