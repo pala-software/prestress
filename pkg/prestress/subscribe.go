@@ -161,3 +161,47 @@ func (server Server) handleSubscription(
 		}
 	}
 }
+
+// TODO: Test
+func (server Server) collectChanges(ctx context.Context, tx pgx.Tx) error {
+	var err error
+
+	rows, err := tx.Query(
+		ctx,
+		`SELECT
+			subscription_id,
+			row_key,
+			row_data,
+			row_operation
+		FROM
+			pg_temp.prestress_change`,
+	)
+	if err != nil {
+		return err
+	}
+
+	var subId int
+	var change Change
+	for rows.Next() {
+		err = rows.Scan(
+			&subId,
+			&change.RowKey,
+			&change.RowData,
+			&change.RowOperation,
+		)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+
+		subscription, exists := server.subscriptions[subId]
+		if !exists {
+			fmt.Println("change collected for subscription that does not exist")
+			continue
+		}
+
+		subscription.Change <- change
+	}
+
+	return nil
+}

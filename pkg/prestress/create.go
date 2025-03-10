@@ -65,6 +65,11 @@ func (server Server) Create(
 		}
 	}
 
+	err = server.collectChanges(ctx, tx)
+	if err != nil {
+		return err
+	}
+
 	err = tx.Commit(ctx)
 	if err != nil {
 		return err
