@@ -33,11 +33,13 @@ func (server Server) Delete(
 		where.Values()...,
 	)
 	if err != nil {
+		tx.Rollback(ctx)
 		return err
 	}
 
 	err = server.collectChanges(ctx, tx)
 	if err != nil {
+		tx.Rollback(ctx)
 		return err
 	}
 

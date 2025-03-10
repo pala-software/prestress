@@ -80,18 +80,18 @@ func TestFindAll(t *testing.T) {
 	table := "test"
 	where := prestress.Where{}
 
-	rows, err := server.Find(ctx, auth, schema, table, where, 100, 0)
+	result, err := server.Find(ctx, auth, schema, table, where, 100, 0)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if rows == nil {
-		t.Error("rows is nil")
+	if result == nil {
+		t.Error("result is nil")
 		return
 	}
 
-	defer rows.Close()
-	err = expectValues(rows, []string{"1", "2"})
+	defer result.Done()
+	err = expectValues(result.Rows, []string{"1", "2"})
 	if err != nil {
 		t.Error(err)
 		return
@@ -110,18 +110,18 @@ func TestFindWithFilter(t *testing.T) {
 		"test": "1",
 	}
 
-	rows, err := server.Find(ctx, auth, schema, table, where, 100, 0)
+	result, err := server.Find(ctx, auth, schema, table, where, 100, 0)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if rows == nil {
-		t.Error("rows is nil")
+	if result == nil {
+		t.Error("result is nil")
 		return
 	}
 
-	defer rows.Close()
-	err = expectValues(rows, []string{"1"})
+	defer result.Done()
+	err = expectValues(result.Rows, []string{"1"})
 	if err != nil {
 		t.Error(err)
 		return

@@ -63,11 +63,13 @@ func (server Server) Update(
 		values...,
 	)
 	if err != nil {
+		tx.Rollback(ctx)
 		return err
 	}
 
 	err = server.collectChanges(ctx, tx)
 	if err != nil {
+		tx.Rollback(ctx)
 		return err
 	}
 

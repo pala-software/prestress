@@ -10,6 +10,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+type FindResult struct {
+	Rows pgx.Rows
+	Done func() error
+}
+
 func (server Server) Find(
 	ctx context.Context,
 	auth AuthenticationResult,
@@ -18,7 +23,7 @@ func (server Server) Find(
 	where Where,
 	limit int,
 	offset int,
-) (pgx.Rows, error) {
+) (*FindResult, error) {
 	var err error
 
 	tx, err := server.Begin(ctx, auth, schema)
@@ -38,10 +43,17 @@ func (server Server) Find(
 		where.Values()...,
 	)
 	if err != nil {
-		return rows, err
+		tx.Rollback(ctx)
+		return nil, err
 	}
 
-	return rows, nil
+	return &FindResult{
+		Rows: rows,
+		Done: func() error {
+			rows.Close()
+			return tx.Commit(ctx)
+		},
+	}, nil
 }
 
 // TODO: Test
@@ -80,7 +92,7 @@ func (server Server) handleFind(
 		return
 	}
 
-	rows, err := server.Find(
+	result, err := server.Find(
 		request.Context(),
 		*auth,
 		schema,
@@ -95,12 +107,12 @@ func (server Server) handleFind(
 	}
 
 	writer.WriteHeader(200)
-	columns := rows.FieldDescriptions()
+	columns := result.Rows.FieldDescriptions()
 
 	row := make(map[string]any, len(columns))
-	defer rows.Close()
-	for rows.Next() {
-		values, err := rows.Values()
+	defer result.Done()
+	for result.Rows.Next() {
+		values, err := result.Rows.Values()
 		if err != nil {
 			fmt.Println(err)
 			return

@@ -38,7 +38,8 @@ func (server Server) Begin(
 		),
 	)
 	if err != nil {
-		return tx, err
+		tx.Rollback(ctx)
+		return nil, err
 	}
 
 	_, err = tx.Exec(
@@ -49,12 +50,14 @@ func (server Server) Begin(
 		),
 	)
 	if err != nil {
-		return tx, err
+		tx.Rollback(ctx)
+		return nil, err
 	}
 
 	encodedVariables, err := json.Marshal(auth.Variables)
 	if err != nil {
-		return tx, err
+		tx.Rollback(ctx)
+		return nil, err
 	}
 
 	_, err = tx.Exec(
@@ -63,7 +66,8 @@ func (server Server) Begin(
 		encodedVariables,
 	)
 	if err != nil {
-		return tx, err
+		tx.Rollback(ctx)
+		return nil, err
 	}
 
 	return tx, nil
