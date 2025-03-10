@@ -5,20 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
-
-type FilterMap map[string]string
 
 func (server Server) Find(
 	ctx context.Context,
 	auth AuthenticationResult,
 	schema string,
 	table string,
-	filters FilterMap,
+	where Where,
 ) (pgx.Rows, error) {
 	var err error
 
@@ -27,38 +23,14 @@ func (server Server) Find(
 		return nil, err
 	}
 
-	var where []string
-	n := 1
-	for column := range filters {
-		where = append(
-			where,
-			fmt.Sprintf(
-				"%s = %s",
-				pgx.Identifier{column}.Sanitize(),
-				"$"+strconv.Itoa(n),
-			),
-		)
-		n++
-	}
-
-	whereStr := ""
-	if len(where) > 0 {
-		whereStr = "WHERE " + strings.Join(where, " AND ")
-	}
-
-	values := make([]any, 0, len(filters))
-	for _, value := range filters {
-		values = append(values, value)
-	}
-
 	rows, err := tx.Query(
 		ctx,
 		fmt.Sprintf(
-			"SELECT * FROM %s %s",
+			"SELECT * FROM %s AS t %s",
 			pgx.Identifier{schema, table}.Sanitize(),
-			whereStr,
+			where.String("t", 1),
 		),
-		values...,
+		where.Values()...,
 	)
 	if err != nil {
 		return rows, err
@@ -78,13 +50,13 @@ func (server Server) handleFind(
 	table := request.PathValue("table")
 	query := request.URL.Query()
 
-	filters := make(FilterMap, len(query))
+	where := make(Where, len(query))
 	for key, values := range query {
 		if len(values) == 0 {
 			continue
 		}
 
-		filters[key] = values[0]
+		where[key] = values[0]
 	}
 
 	auth := server.Authenticate(writer, request)
@@ -97,13 +69,14 @@ func (server Server) handleFind(
 		*auth,
 		schema,
 		table,
-		filters,
+		where,
 	)
 	if err != nil {
 		handleOperationError(writer, err)
 		return
 	}
 
+	writer.WriteHeader(200)
 	columns := rows.FieldDescriptions()
 
 	row := make(map[string]any, len(columns))

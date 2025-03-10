@@ -13,56 +13,57 @@ import (
 )
 
 // TODO: Test
-func (server Server) Create(
+func (server Server) Update(
 	ctx context.Context,
 	auth AuthenticationResult,
 	schema string,
 	table string,
+	where Where,
 	data map[string]any,
 ) error {
 	var err error
+
+	if len(data) == 0 {
+		return nil
+	}
 
 	tx, err := server.Begin(ctx, auth, schema)
 	if err != nil {
 		return err
 	}
 
-	if len(data) == 0 {
-		_, err = tx.Exec(
-			ctx,
+	patch := make([]string, 0, len(data))
+	n := 1
+	for column := range data {
+		patch = append(
+			patch,
 			fmt.Sprintf(
-				"INSERT INTO %s DEFAULT VALUES",
-				pgx.Identifier{schema, table}.Sanitize(),
+				"%s = %s",
+				pgx.Identifier{column}.Sanitize(),
+				"$"+strconv.Itoa(n),
 			),
 		)
-		if err != nil {
-			return err
-		}
-	} else {
-		columns := make([]string, 0, len(data))
-		values := make([]any, 0, len(data))
-		placeholders := make([]string, 0, len(data))
-		n := 1
-		for key, value := range data {
-			columns = append(columns, pgx.Identifier{key}.Sanitize())
-			values = append(values, value)
-			placeholders = append(placeholders, "$"+strconv.Itoa(n))
-			n++
-		}
+		n++
+	}
 
-		_, err = tx.Exec(
-			ctx,
-			fmt.Sprintf(
-				"INSERT INTO %s (%s) VALUES (%s)",
-				pgx.Identifier{schema, table}.Sanitize(),
-				strings.Join(columns, ", "),
-				strings.Join(placeholders, ", "),
-			),
-			values...,
-		)
-		if err != nil {
-			return err
-		}
+	values := make([]any, 0, len(patch)+len(where))
+	for _, value := range data {
+		values = append(values, value)
+	}
+	values = append(values, where.Values()...)
+
+	_, err = tx.Exec(
+		ctx,
+		fmt.Sprintf(
+			"UPDATE %s AS t SET %s %s",
+			pgx.Identifier{schema, table}.Sanitize(),
+			strings.Join(patch, ", "),
+			where.String("t", len(patch)+1),
+		),
+		values...,
+	)
+	if err != nil {
+		return err
 	}
 
 	err = server.collectChanges(ctx, tx)
@@ -79,7 +80,7 @@ func (server Server) Create(
 }
 
 // TODO: Test
-func (server Server) handleCreate(
+func (server Server) handleUpdate(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -87,6 +88,16 @@ func (server Server) handleCreate(
 
 	schema := request.PathValue("schema")
 	table := request.PathValue("table")
+	query := request.URL.Query()
+
+	where := make(Where, len(query))
+	for key, values := range query {
+		if len(values) == 0 {
+			continue
+		}
+
+		where[key] = values[0]
+	}
 
 	if request.Body == nil {
 		writer.WriteHeader(400)
@@ -113,11 +124,18 @@ func (server Server) handleCreate(
 		return
 	}
 
-	err = server.Create(request.Context(), *auth, schema, table, data)
+	err = server.Update(
+		request.Context(),
+		*auth,
+		schema,
+		table,
+		where,
+		data,
+	)
 	if err != nil {
 		handleOperationError(writer, err)
 		return
 	}
 
-	writer.WriteHeader(201)
+	writer.WriteHeader(200)
 }
