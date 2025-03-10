@@ -50,10 +50,10 @@ func TestFindWithCancelledContext(t *testing.T) {
 	}
 	schema := "find_test"
 	table := "test"
-	filters := prestress.Where{}
+	where := prestress.Where{}
 
 	cancel()
-	rows, err := server.Find(ctx, auth, schema, table, filters)
+	rows, err := server.Find(ctx, auth, schema, table, where, 100, 0)
 
 	if rows != nil {
 		t.Error("rows should be nil")
@@ -78,9 +78,9 @@ func TestFindAll(t *testing.T) {
 	}
 	schema := "find_test"
 	table := "test"
-	filters := prestress.Where{}
+	where := prestress.Where{}
 
-	rows, err := server.Find(ctx, auth, schema, table, filters)
+	rows, err := server.Find(ctx, auth, schema, table, where, 100, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -106,11 +106,11 @@ func TestFindWithFilter(t *testing.T) {
 	}
 	schema := "find_test"
 	table := "test"
-	filters := prestress.Where{
+	where := prestress.Where{
 		"test": "1",
 	}
 
-	rows, err := server.Find(ctx, auth, schema, table, filters)
+	rows, err := server.Find(ctx, auth, schema, table, where, 100, 0)
 	if err != nil {
 		t.Error(err)
 	}

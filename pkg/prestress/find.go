@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -15,6 +16,8 @@ func (server Server) Find(
 	schema string,
 	table string,
 	where Where,
+	limit int,
+	offset int,
 ) (pgx.Rows, error) {
 	var err error
 
@@ -26,9 +29,11 @@ func (server Server) Find(
 	rows, err := tx.Query(
 		ctx,
 		fmt.Sprintf(
-			"SELECT * FROM %s AS t %s",
+			"SELECT * FROM %s AS t %s LIMIT %d OFFSET %d",
 			pgx.Identifier{schema, table}.Sanitize(),
 			where.String("t", 1),
+			limit,
+			offset,
 		),
 		where.Values()...,
 	)
@@ -50,13 +55,24 @@ func (server Server) handleFind(
 	table := request.PathValue("table")
 	query := request.URL.Query()
 
-	where := make(Where, len(query))
-	for key, values := range query {
-		if len(values) == 0 {
-			continue
-		}
+	where := ParseWhere(query)
 
-		where[key] = values[0]
+	limit := 100
+	if query.Has("limit") {
+		limit, err = strconv.Atoi(query.Get("limit"))
+		if err != nil {
+			writer.WriteHeader(400)
+			return
+		}
+	}
+
+	offset := 0
+	if query.Has("offset") {
+		offset, err = strconv.Atoi(query.Get("offset"))
+		if err != nil {
+			writer.WriteHeader(400)
+			return
+		}
 	}
 
 	auth := server.Authenticate(writer, request)
@@ -70,6 +86,8 @@ func (server Server) handleFind(
 		schema,
 		table,
 		where,
+		limit,
+		offset,
 	)
 	if err != nil {
 		handleOperationError(writer, err)

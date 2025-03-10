@@ -90,14 +90,7 @@ func (server Server) handleUpdate(
 	table := request.PathValue("table")
 	query := request.URL.Query()
 
-	where := make(Where, len(query))
-	for key, values := range query {
-		if len(values) == 0 {
-			continue
-		}
-
-		where[key] = values[0]
-	}
+	where := ParseWhere(query)
 
 	if request.Body == nil {
 		writer.WriteHeader(400)

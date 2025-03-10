@@ -60,14 +60,7 @@ func (server Server) handleDelete(
 	table := request.PathValue("table")
 	query := request.URL.Query()
 
-	where := make(Where, len(query))
-	for key, values := range query {
-		if len(values) == 0 {
-			continue
-		}
-
-		where[key] = values[0]
-	}
+	where := ParseWhere(query)
 
 	auth := server.Authenticate(writer, request)
 	if auth == nil {
