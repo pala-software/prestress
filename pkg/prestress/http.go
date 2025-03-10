@@ -12,6 +12,7 @@ func (server *Server) StartHttpServer() error {
 	mux.HandleFunc("GET /{schema}/{table}", server.handleFind)
 	mux.HandleFunc("POST /{schema}/{table}", server.handleCreate)
 	mux.HandleFunc("PATCH /{schema}/{table}", server.handleUpdate)
+	mux.HandleFunc("DELETE /{schema}/{table}", server.handleDelete)
 	mux.HandleFunc("GET /{schema}/{table}/subscription", server.handleSubscription)
 
 	server.HTTP = &http.Server{
