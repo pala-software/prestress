@@ -14,8 +14,8 @@
 - [x] Pass on pg_temp.prestress_change to subscriber on mutation operations
 - [x] Fix view subscription
 - [x] Fix teardown_subscription error
-- [ ] Update operation
-- [ ] Delete operation
+- [x] Update operation
+- [x] Delete operation
 - [ ] Pagination
 - [ ] API documentation
 - [ ] Schema and table discovery endpoints
