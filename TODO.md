@@ -17,9 +17,11 @@
 - [x] Update operation
 - [x] Delete operation
 - [x] Pagination
+- [ ] Fix Content-Type headers
 - [ ] API documentation
-- [ ] Schema and table discovery endpoints
+- [ ] Package for Nix
 - [ ] Docker container images
+- [ ] Schema and table discovery endpoints
 - [ ] Improve development environment and enable devcontainer
 - [ ] Improve test coverage
 - [ ] CI for tests and coverage
