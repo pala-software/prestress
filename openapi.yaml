@@ -1,0 +1,182 @@
+openapi: 3.1.1
+
+info:
+  title: Prestress API
+  version: 0.0.0
+
+paths:
+  /{schema}/{table}:
+    get:
+      summary: Find
+      description: ""
+      parameters:
+        - name: Authorization
+          in: header
+        - name: schema
+          in: path
+          description: ""
+          required: true
+        - name: table
+          in: path
+          description: ""
+          required: true
+      responses:
+        200:
+          summary: "OK"
+          description: ""
+          content:
+            text/plain:
+              description: ""
+              example: |
+                {"column-1": 1, "column-2": "value 1"}
+                {"column-1": 2, "column-2": "value 2"}
+            application/json:
+              description: ""
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+              example: [
+                {"column-1": 1, "column-2": "value 1"},
+                {"column-1": 2, "column-2": "value 2"}
+              ]
+        401:
+          description: ""
+        403:
+          description: ""
+        500:
+          description: ""
+
+    post:
+      summary: Create
+      description: ""
+      parameters:
+        - name: schema
+          in: path
+          description: ""
+          required: true
+        - name: table
+          in: path
+          description: ""
+          required: true
+      requestBody:
+        description: ""
+        content:
+          text/plain:
+            description: ""
+            example: |
+              {"column-1": 1, "column-2": "value 1"}
+              {"column-1": 2, "column-2": "value 2"}
+          application/json:
+            description: ""
+            schema:
+              type: object
+              additionalProperties: true
+            example: {"column-1": 1, "column-2": "value 1"}
+        required: true
+      responses:
+        201:
+          description: ""
+        401:
+          description: ""
+        403:
+          description: ""
+        500:
+          description: ""
+
+    patch:
+      summary: Update
+      description: ""
+      parameters:
+        - name: schema
+          in: path
+          description: ""
+          required: true
+        - name: table
+          in: path
+          description: ""
+          required: true
+      requestBody:
+        description: ""
+        content:
+          application/json:
+            description: ""
+            schema:
+              type: object
+              additionalProperties: true
+            example: {"column-1": 1, "column-2": "value 1"}
+        required: true
+      responses:
+        200:
+          description: ""
+        401:
+          description: ""
+        403:
+          description: ""
+        500:
+          description: ""
+
+    delete:
+      summary: Delete
+      description: ""
+      parameters:
+        - name: schema
+          in: path
+          description: ""
+          required: true
+        - name: table
+          in: path
+          description: ""
+          required: true
+      responses:
+        200:
+          description: ""
+        401:
+          description: ""
+        403:
+          description: ""
+        500:
+          description: ""
+
+  /{schema}/{table}/subscription:
+    get:
+      summary: Subscribe
+      description: ""
+      parameters:
+        - name: schema
+          in: path
+          description: ""
+          required: true
+        - name: table
+          in: path
+          description: ""
+          required: true
+      responses:
+        200:
+          description: ""
+          content:
+            text/event-stream:
+              description: ""
+              example: |
+                event: change
+                data: {"op": "INSERT", key: [1], data: {"column-1": 1, "column-2": "value 1"}}
+                
+                event:change
+                data: {"op": "UPDATE", key: [1], data: {"column-1": 1, "column-2": "value 2"}}
+        401:
+          description: ""
+        403:
+          description: ""
+        500:
+          description: ""
+
+components:
+  securitySchemes:
+    token:
+      type: http
+      scheme: Bearer
+
+security:
+  - {}
+  - token: []
