@@ -3,10 +3,12 @@ package prestress_test
 import (
 	"context"
 	"embed"
+	"fmt"
 	"log"
 	"os"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -14,6 +16,45 @@ var server prestress.Server
 
 //go:embed find_test.sql
 var findTestMigrations embed.FS
+
+func expectValues(rows pgx.Rows, expectedValues []string) error {
+	var err error
+	count := 0
+	for _, expectedValue := range expectedValues {
+		if !rows.Next() {
+			return fmt.Errorf(
+				"expected %d rows, got %d",
+				len(expectedValues),
+				count,
+			)
+		}
+
+		var actualValue string
+		err = rows.Scan(&actualValue)
+		if err != nil {
+			return err
+		}
+
+		if actualValue != expectedValue {
+			return fmt.Errorf(
+				"expected value '%s', got '%s'",
+				expectedValue,
+				actualValue,
+			)
+		}
+
+		count++
+	}
+
+	if rows.Next() {
+		return fmt.Errorf(
+			"expected %d rows, got too many",
+			len(expectedValues),
+		)
+	}
+
+	return nil
+}
 
 func TestMain(m *testing.M) {
 	var err error
