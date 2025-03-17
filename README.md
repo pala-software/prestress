@@ -44,3 +44,13 @@ Prestress is in early development. It's not ready for use in production.
 Generic documentation for Prestress API can be found from file
 [openapi.yaml](./openapi.yaml). In GitLab it's automatically rendered as
 interactive Swagger UI, so you can view it easily.
+
+# Contributing
+
+- Report vulnerabilities via email to one of the project owner. Don not post
+  them as issues.
+
+- Before contributing code, discuss the issue with the project maintainers.
+
+- Read [Developing Prestress](./docs/developing-prestress.md) to get started and
+  familiar with developing Prestress.

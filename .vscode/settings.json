@@ -1,5 +1,9 @@
 {
   "cSpell.diagnosticLevel": "Hint",
   "direnv.watchForChanges": false,
-  "cSpell.words": ["pgxpool"]
+  "cSpell.words": [
+    "devenv",
+    "pgxpool",
+    "psql"
+  ]
 }
