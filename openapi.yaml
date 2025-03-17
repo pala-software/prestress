@@ -286,7 +286,6 @@ paths:
                 
                 event:change
                 data: {"op": "UPDATE", key: [1], data: {"column-1": 1, "column-2": "value 2"}}
-                201:
         401:
           summary: Unauthorized
           description: Authorization failed
