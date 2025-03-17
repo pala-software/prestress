@@ -4,6 +4,7 @@
   packages = with pkgs; [
     git
     wgo
+    httpie
   ];
   env = {
     PRESTRESS_ENVIRONMENT = "development";
@@ -26,5 +27,16 @@
       wgo run cmd/prestress/prestress.go start
     '';
     process-compose.depends_on.postgres.condition = "process_healthy";
+  };
+  devcontainer = {
+    enable = true;
+    settings.customizations.vscode.extensions = [
+      "mkhl.direnv"
+      "streetsidesoftware.code-spell-checker"
+      "eamodio.gitlens"
+      "golang.go"
+      "bbenoist.Nix"
+      "redhat.vscode-yaml"
+    ];
   };
 }
