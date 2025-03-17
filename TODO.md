@@ -17,11 +17,13 @@
 - [x] Update operation
 - [x] Delete operation
 - [x] Pagination
-- [ ] Fix Content-Type headers
-- [ ] API documentation
+- [x] Make standard JSON the default content type
+- [x] Fix Content-Type headers
+- [x] Improve API documentation
 - [ ] Package for Nix
 - [ ] Docker container images
 - [ ] Schema and table discovery endpoints
 - [ ] Improve development environment and enable devcontainer
 - [ ] Improve test coverage
 - [ ] CI for tests and coverage
+- [ ] Add JSONL support
