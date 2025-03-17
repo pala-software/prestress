@@ -107,8 +107,11 @@ func (server Server) handleFind(
 	}
 
 	writer.WriteHeader(200)
-	columns := result.Rows.FieldDescriptions()
+	writer.Write([]byte("["))
+	defer writer.Write([]byte("]"))
 
+	first := true
+	columns := result.Rows.FieldDescriptions()
 	row := make(map[string]any, len(columns))
 	defer result.Done()
 	for result.Rows.Next() {
@@ -128,8 +131,11 @@ func (server Server) handleFind(
 			return
 		}
 
-		// Add newline at the end of JSON object
-		encodedRow = append(encodedRow, 0x0A)
+		if first {
+			first = false
+		} else {
+			writer.Write([]byte(","))
+		}
 
 		_, err = writer.Write(encodedRow)
 		if err != nil {

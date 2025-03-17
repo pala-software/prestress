@@ -12,24 +12,28 @@ paths:
       parameters:
         - name: Authorization
           in: header
+          schema:
+            type: string
+            minLength: 1
         - name: schema
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
         - name: table
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
       responses:
         200:
           summary: "OK"
           description: ""
           content:
-            text/plain:
-              description: ""
-              example: |
-                {"column-1": 1, "column-2": "value 1"}
-                {"column-1": 2, "column-2": "value 2"}
             application/json:
               description: ""
               schema:
@@ -41,6 +45,11 @@ paths:
                 {"column-1": 1, "column-2": "value 1"},
                 {"column-1": 2, "column-2": "value 2"}
               ]
+            text/plain:
+              description: ""
+              example: |
+                {"column-1": 1, "column-2": "value 1"}
+                {"column-1": 2, "column-2": "value 2"}
         401:
           description: ""
         403:
@@ -56,24 +65,30 @@ paths:
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
         - name: table
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
       requestBody:
         description: ""
         content:
-          text/plain:
-            description: ""
-            example: |
-              {"column-1": 1, "column-2": "value 1"}
-              {"column-1": 2, "column-2": "value 2"}
           application/json:
             description: ""
             schema:
               type: object
               additionalProperties: true
             example: {"column-1": 1, "column-2": "value 1"}
+          text/plain:
+            description: ""
+            example: |
+              {"column-1": 1, "column-2": "value 1"}
+              {"column-1": 2, "column-2": "value 2"}
         required: true
       responses:
         201:
@@ -93,10 +108,16 @@ paths:
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
         - name: table
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
       requestBody:
         description: ""
         content:
@@ -125,10 +146,16 @@ paths:
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
         - name: table
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
       responses:
         200:
           description: ""
@@ -148,10 +175,16 @@ paths:
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
         - name: table
           in: path
           description: ""
           required: true
+          schema:
+            type: string
+            minLength: 1
       responses:
         200:
           description: ""
