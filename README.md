@@ -38,3 +38,9 @@ Prestress is in early development. It's not ready for use in production.
   Prestress implements a way to execute database migrations, so you don't have
   to worry about implementing it or finding a suitable tool for keeping your
   database schema up to date.
+
+# API documentation
+
+Generic documentation for Prestress API can be found from file
+[openapi.yaml](./openapi.yaml). In GitLab it's automatically rendered as
+interactive Swagger UI, so you can view it easily.
