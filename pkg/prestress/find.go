@@ -12,7 +12,7 @@ import (
 
 type FindResult struct {
 	Rows pgx.Rows
-	Done func() error
+	Done func()
 }
 
 func (server Server) Find(
@@ -49,9 +49,12 @@ func (server Server) Find(
 
 	return &FindResult{
 		Rows: rows,
-		Done: func() error {
+		Done: func() {
 			rows.Close()
-			return tx.Commit(ctx)
+			err := tx.Commit(ctx)
+			if err != nil {
+				fmt.Println(err)
+			}
 		},
 	}, nil
 }
@@ -106,11 +109,6 @@ func (server Server) handleFind(
 		return
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(200)
-	writer.Write([]byte("["))
-	defer writer.Write([]byte("]"))
-
 	first := true
 	columns := result.Rows.FieldDescriptions()
 	row := make(map[string]any, len(columns))
@@ -134,6 +132,10 @@ func (server Server) handleFind(
 
 		if first {
 			first = false
+			writer.Header().Set("Content-Type", "application/json")
+			writer.WriteHeader(200)
+			writer.Write([]byte("["))
+			defer writer.Write([]byte("]"))
 		} else {
 			writer.Write([]byte(","))
 		}
@@ -143,5 +145,16 @@ func (server Server) handleFind(
 			fmt.Println(err)
 			return
 		}
+	}
+
+	err = result.Rows.Err()
+	if err != nil {
+		handleOperationError(writer, err)
+		return
+	}
+
+	if first {
+		writer.WriteHeader(200)
+		writer.Write([]byte("[]"))
 	}
 }

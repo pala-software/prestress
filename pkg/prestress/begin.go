@@ -25,7 +25,7 @@ func (server Server) Begin(
 
 	tx, err := server.DB.Begin(ctx)
 	if err != nil {
-		return tx, err
+		return nil, err
 	}
 
 	_, err = tx.Exec(
