@@ -4,6 +4,13 @@ info:
   title: Prestress API
   version: 0.0.0
 
+servers:
+  - url: '{url}'
+    variables:
+      url:
+        default: 'http://localhost:8080'
+        description: URL to your Prestress server
+
 paths:
   /{schema}/{table}:
     get:
