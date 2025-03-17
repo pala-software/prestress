@@ -47,8 +47,8 @@ interactive Swagger UI, so you can view it easily.
 
 # Contributing
 
-- Report vulnerabilities via email to one of the project owner. Don not post
-  them as issues.
+- Report vulnerabilities via email the project owner. Do not post them as
+  issues.
 
 - Before contributing code, discuss the issue with the project maintainers.
 
