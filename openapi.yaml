@@ -8,7 +8,7 @@ paths:
   /{schema}/{table}:
     get:
       summary: Find
-      description: ""
+      description: Find and retrieve rows from a table
       parameters:
         - name: Authorization
           in: header
@@ -17,25 +17,46 @@ paths:
             minLength: 1
         - name: schema
           in: path
-          description: ""
+          description: Name of schema or namespace
           required: true
           schema:
             type: string
             minLength: 1
         - name: table
           in: path
-          description: ""
+          description: Name of table or view
           required: true
           schema:
             type: string
             minLength: 1
+        - name: limit
+          in: query
+          description: Maximum number of rows to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: offset
+          in: query
+          description: Offset of the result set
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+        - name: where
+          in: query
+          description: Key-value pairs to reduce result set with (eg. where[column]=value)
+          required: false
+          schema:
+            type: object
+            additionalProperties:
+              type: string
       responses:
         200:
-          summary: "OK"
-          description: ""
+          summary: Success
+          description: Find was successful and rows are returned
           content:
             application/json:
-              description: ""
               schema:
                 type: array
                 items:
@@ -46,26 +67,39 @@ paths:
                 {"column-1": 2, "column-2": "value 2"}
               ]
         401:
-          description: ""
+          summary: Unauthorized
+          description: Authorization failed
         403:
-          description: ""
+          summary: Forbidden
+          description: Permission denied
+          content:
+            text/plain:
+              example: |
+                permission denied for table example
+        404:
+          summary: Not found
+          description: Invalid path or resource not found
+          content:
+            text/plain:
+              example: |
+                relation "public.example" does not exist
         500:
-          description: ""
-
+          summary: Internal server error
+          description: Unexpected error happened
     post:
       summary: Create
-      description: ""
+      description: Insert rows into a table
       parameters:
         - name: schema
           in: path
-          description: ""
+          description: Name of schema or namespace
           required: true
           schema:
             type: string
             minLength: 1
         - name: table
           in: path
-          description: ""
+          description: Name of table or view
           required: true
           schema:
             type: string
@@ -82,32 +116,55 @@ paths:
         required: true
       responses:
         201:
-          description: ""
+          summary: Success
+          description: Rows inserted successfully
         401:
-          description: ""
+          summary: Unauthorized
+          description: Authorization failed
         403:
-          description: ""
+          summary: Forbidden
+          description: Permission denied
+          content:
+            text/plain:
+              example: |
+                permission denied for table example
+        404:
+          summary: Not found
+          description: Invalid path or resource not found
+          content:
+            text/plain:
+              example: |
+                relation "public.example" does not exist
         500:
-          description: ""
+          summary: Internal server error
+          description: Unexpected error happened
 
     patch:
       summary: Update
-      description: ""
+      description: Update rows
       parameters:
         - name: schema
           in: path
-          description: ""
+          description: Name of schema or namespace
           required: true
           schema:
             type: string
             minLength: 1
         - name: table
           in: path
-          description: ""
+          description: Name of table or view
           required: true
           schema:
             type: string
             minLength: 1
+        - name: where
+          in: query
+          description: Key-value pairs to select row to update (eg. where[column]=value)
+          required: false
+          schema:
+            type: object
+            additionalProperties:
+              type: string
       requestBody:
         description: ""
         content:
@@ -119,80 +176,128 @@ paths:
             example: {"column-1": 1, "column-2": "value 1"}
         required: true
       responses:
-        200:
-          description: ""
+        201:
+          summary: Success
+          description: Rows updated successfully
         401:
-          description: ""
+          summary: Unauthorized
+          description: Authorization failed
         403:
-          description: ""
+          summary: Forbidden
+          description: Permission denied
+          content:
+            text/plain:
+              example: |
+                permission denied for table example
+        404:
+          summary: Not found
+          description: Invalid path or resource not found
+          content:
+            text/plain:
+              example: |
+                relation "public.example" does not exist
         500:
-          description: ""
+          summary: Internal server error
+          description: Unexpected error happened
 
     delete:
       summary: Delete
-      description: ""
+      description: Delete rows
       parameters:
         - name: schema
           in: path
-          description: ""
+          description: Name of schema or namespace
           required: true
           schema:
             type: string
             minLength: 1
         - name: table
           in: path
-          description: ""
+          description: Name of table or view
           required: true
           schema:
             type: string
             minLength: 1
+        - name: where
+          in: query
+          description: Key-value pairs to select row to delete (eg. where[column]=value)
+          required: false
+          schema:
+            type: object
+            additionalProperties:
+              type: string
       responses:
         200:
-          description: ""
+          summary: Success
+          description: Rows deleted successfully
         401:
-          description: ""
+          summary: Unauthorized
+          description: Authorization failed
         403:
-          description: ""
-        500:
-          description: ""
+          summary: Forbidden
+          description: Permission denied
+          content:
+            text/plain:
+              example: |
+                permission denied for table example
+        404:
+          summary: Not found
+          description: Invalid path or resource not found
+          content:
+            text/plain:
+              example: |
+                relation "public.example" does not exist
+
 
   /{schema}/{table}/subscription:
     get:
       summary: Subscribe
-      description: ""
+      description: Subscribe to changes to table
       parameters:
         - name: schema
           in: path
-          description: ""
+          description: Name of schema or namespace
           required: true
           schema:
             type: string
             minLength: 1
         - name: table
           in: path
-          description: ""
+          description: Name of table or view
           required: true
           schema:
             type: string
             minLength: 1
       responses:
         200:
-          description: ""
+          description: Event stream successfully started
           content:
             text/event-stream:
-              description: ""
               example: |
                 event: change
                 data: {"op": "INSERT", key: [1], data: {"column-1": 1, "column-2": "value 1"}}
                 
                 event:change
                 data: {"op": "UPDATE", key: [1], data: {"column-1": 1, "column-2": "value 2"}}
+                201:
         401:
-          description: ""
+          summary: Unauthorized
+          description: Authorization failed
         403:
-          description: ""
-        500:
-          description: ""
+          summary: Forbidden
+          description: Permission denied
+          content:
+            text/plain:
+              example: |
+                permission denied for table example
+        404:
+          summary: Not found
+          description: Invalid path or resource not found
+          content:
+            text/plain:
+              example: |
+                relation "public.example" does not exist
+
 
 components:
   securitySchemes:
