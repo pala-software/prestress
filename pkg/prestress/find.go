@@ -106,6 +106,7 @@ func (server Server) handleFind(
 		return
 	}
 
+	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(200)
 	writer.Write([]byte("["))
 	defer writer.Write([]byte("]"))
