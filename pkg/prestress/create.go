@@ -119,5 +119,5 @@ func (server Server) handleCreate(
 		return
 	}
 
-	writer.WriteHeader(201)
+	writer.WriteHeader(204)
 }

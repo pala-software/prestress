@@ -5,10 +5,10 @@ info:
   version: 0.0.0
 
 servers:
-  - url: '{url}'
+  - url: "{url}"
     variables:
       url:
-        default: 'http://localhost:8080'
+        default: http://localhost:8080
         description: URL to your Prestress server
 
 paths:
@@ -54,10 +54,12 @@ paths:
           in: query
           description: Key-value pairs to reduce result set with (eg. where[column]=value)
           required: false
+          style: deepObject
           schema:
             type: object
             additionalProperties:
               type: string
+          example: { "column-1": 1, "column-2": "value 1" }
       responses:
         200:
           summary: Success
@@ -69,10 +71,11 @@ paths:
                 items:
                   type: object
                   additionalProperties: true
-              example: [
-                {"column-1": 1, "column-2": "value 1"},
-                {"column-1": 2, "column-2": "value 2"}
-              ]
+              example:
+                [
+                  { "column-1": 1, "column-2": "value 1" },
+                  { "column-1": 2, "column-2": "value 2" },
+                ]
         401:
           summary: Unauthorized
           description: Authorization failed
@@ -119,7 +122,7 @@ paths:
             schema:
               type: object
               additionalProperties: true
-            example: {"column-1": 1, "column-2": "value 1"}
+            example: { "column-1": 1, "column-2": "value 1" }
         required: true
       responses:
         201:
@@ -168,10 +171,12 @@ paths:
           in: query
           description: Key-value pairs to select row to update (eg. where[column]=value)
           required: false
+          style: deepObject
           schema:
             type: object
             additionalProperties:
               type: string
+          example: { "column-1": 1, "column-2": "value 1" }
       requestBody:
         description: ""
         content:
@@ -180,10 +185,10 @@ paths:
             schema:
               type: object
               additionalProperties: true
-            example: {"column-1": 1, "column-2": "value 1"}
+            example: { "column-1": 1, "column-2": "value 1" }
         required: true
       responses:
-        201:
+        204:
           summary: Success
           description: Rows updated successfully
         401:
@@ -229,12 +234,14 @@ paths:
           in: query
           description: Key-value pairs to select row to delete (eg. where[column]=value)
           required: false
+          style: deepObject
           schema:
             type: object
             additionalProperties:
               type: string
+          example: { "column-1": 1, "column-2": "value 1" }
       responses:
-        200:
+        204:
           summary: Success
           description: Rows deleted successfully
         401:
@@ -254,7 +261,6 @@ paths:
             text/plain:
               example: |
                 relation "public.example" does not exist
-
 
   /{schema}/{table}/subscription:
     get:
@@ -283,7 +289,7 @@ paths:
               example: |
                 event: change
                 data: {"op": "INSERT", key: [1], data: {"column-1": 1, "column-2": "value 1"}}
-                
+
                 event:change
                 data: {"op": "UPDATE", key: [1], data: {"column-1": 1, "column-2": "value 2"}}
         401:
@@ -303,7 +309,6 @@ paths:
             text/plain:
               example: |
                 relation "public.example" does not exist
-
 
 components:
   securitySchemes:

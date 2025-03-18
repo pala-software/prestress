@@ -132,5 +132,5 @@ func (server Server) handleUpdate(
 		return
 	}
 
-	writer.WriteHeader(200)
+	writer.WriteHeader(204)
 }

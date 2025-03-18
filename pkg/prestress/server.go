@@ -12,6 +12,7 @@ type Server struct {
 	Environment      Environment
 	DbConnStr        string
 	MigrationDir     string
+	AllowedOrigins   string
 	DisableAuth      bool
 	ClientId         string
 	ClientSecret     string

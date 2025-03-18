@@ -34,6 +34,7 @@ func (server *Server) ReadConfiguration() error {
 
 	server.DbConnStr = os.Getenv("PRESTRESS_DB_CONNECTION_STRING")
 	server.MigrationDir = os.Getenv("PRESTRESS_MIGRATION_DIRECTORY")
+	server.AllowedOrigins = os.Getenv("PRESTRESS_ALLOWED_ORIGINS")
 
 	server.DisableAuth = os.Getenv("PRESTRESS_AUTH_DISABLE") == "1"
 	if server.DisableAuth && server.Environment != Development {

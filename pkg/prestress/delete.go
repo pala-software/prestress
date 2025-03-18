@@ -81,5 +81,5 @@ func (server Server) handleDelete(
 		return
 	}
 
-	writer.WriteHeader(200)
+	writer.WriteHeader(204)
 }
