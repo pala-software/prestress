@@ -39,6 +39,28 @@ Prestress is in early development. It's not ready for use in production.
   to worry about implementing it or finding a suitable tool for keeping your
   database schema up to date.
 
+# Configuration
+
+Configuration for Prestress is set using environment variables. The table below
+outlines possible variables that may be defined.
+
+| Name (* = Mandatory)             | Possible values                        |
+| -------------------------------- | -------------------------------------- |
+| PRESTRESS_ENVIRONMENT *          | `development` or `production`          |
+| PRESTRESS_DB_CONNECTION_STRING * | [PostgreSQL connection string][1]      |
+| PRESTRESS_MIGRATION_DIRECTORY    | Absolute or relative file path         |
+| PRESTRESS_ALLOWED_ORIGINS        | [HTTP origins to allow][2]             |
+| PRESTRESS_AUTH_DISABLE           | `1`                                    |
+| PRESTRESS_AUTH_INTROSPECTION_URL | [OAuth2 introspection URL][3]          |
+| PRESTRESS_AUTH_CLIENT_ID         | [OAuth2 client ID for this app][4]     |
+| PRESTRESS_AUTH_CLIENT_SECRET     | [OAuth2 client secret for this app][5] |
+
+[1]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+[2]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin
+[3]: https://www.rfc-editor.org/rfc/rfc7662#section-2
+[4]: https://www.rfc-editor.org/rfc/rfc6749#section-2.2
+[5]: https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
+
 # API documentation
 
 Generic documentation for Prestress API can be found from file
