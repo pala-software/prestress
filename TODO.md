@@ -22,7 +22,7 @@
 - [x] Improve API documentation
 - [x] Improve development environment and enable devcontainer
 - [x] CORS
-- [ ] Document configuration
+- [x] Document configuration
 - [ ] Improve test coverage
 - [ ] CI for tests and coverage
 - [ ] Package for Nix
