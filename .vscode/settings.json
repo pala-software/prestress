@@ -2,6 +2,7 @@
   "cSpell.diagnosticLevel": "Hint",
   "direnv.watchForChanges": false,
   "cSpell.words": [
+    "dbname",
     "devenv",
     "pgxpool",
     "psql"
