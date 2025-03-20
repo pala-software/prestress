@@ -23,9 +23,10 @@
 - [x] Improve development environment and enable devcontainer
 - [x] CORS
 - [x] Document configuration
+- [x] CI for tests and coverage
 - [ ] Improve test coverage
-- [ ] CI for tests and coverage
 - [ ] Package for Nix
 - [ ] Docker container images
 - [ ] Schema and table discovery endpoints
 - [ ] Add JSONL support
+- [ ] Dynamic OAuth2 integration allowing multiple IDPs to be added on runtime
