@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 
 	server = prestress.Server{}
 	server.Environment = prestress.Development
-	server.DbConnStr = "dbname=prestress_test"
+	server.DbConnStr = os.Getenv("PRESTRESS_TEST_DB")
 	server.DisableAuth = true
 
 	err = server.ConnectToDatabase()

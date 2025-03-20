@@ -1,0 +1,22 @@
+test:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image: golang:1.23.3-alpine
+  services:
+    - postgres:16.5
+  script:
+    - apk add postgresql16-client
+    - psql $PRESTRESS_TEST_DB < seed.sql
+    - go get github.com/boumenot/gocover-cobertura
+    - go test ./pkg/prestress -coverprofile=coverage.txt -covermode count
+    - go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
+  variables:
+    POSTGRES_PASSWORD: postgres
+    PRESTRESS_TEST_DB: postgres://postgres:postgres@postgres/postgres
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml

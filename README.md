@@ -44,11 +44,11 @@ Prestress is in early development. It's not ready for use in production.
 Configuration for Prestress is set using environment variables. The table below
 outlines possible variables that may be defined.
 
-| Name (* = Mandatory)             | Possible values                        |
+| Name (\* = Mandatory)            | Possible values                        |
 | -------------------------------- | -------------------------------------- |
-| PRESTRESS_ENVIRONMENT *          | `development` or `production`          |
-| PRESTRESS_DB_CONNECTION_STRING * | [PostgreSQL connection string][1]      |
-| PRESTRESS_MIGRATION_DIRECTORY    | Absolute or relative file path         |
+| PRESTRESS_ENVIRONMENT \*         | `development` or `production`          |
+| PRESTRESS_DB \*                  | [PostgreSQL connection string][1]      |
+| PRESTRESS_MIGRATIONS             | Absolute or relative file path         |
 | PRESTRESS_ALLOWED_ORIGINS        | [HTTP origins to allow][2]             |
 | PRESTRESS_AUTH_DISABLE           | `1`                                    |
 | PRESTRESS_AUTH_INTROSPECTION_URL | [OAuth2 introspection URL][3]          |

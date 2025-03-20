@@ -32,8 +32,8 @@ func (server *Server) ReadConfiguration() error {
 		return fmt.Errorf("invalid PRESTRESS_ENVIRONMENT '%s'", server.Environment)
 	}
 
-	server.DbConnStr = os.Getenv("PRESTRESS_DB_CONNECTION_STRING")
-	server.MigrationDir = os.Getenv("PRESTRESS_MIGRATION_DIRECTORY")
+	server.DbConnStr = os.Getenv("PRESTRESS_DB")
+	server.MigrationDir = os.Getenv("PRESTRESS_MIGRATIONS")
 	server.AllowedOrigins = os.Getenv("PRESTRESS_ALLOWED_ORIGINS")
 
 	server.DisableAuth = os.Getenv("PRESTRESS_AUTH_DISABLE") == "1"
