@@ -16,6 +16,7 @@ test:
   variables:
     POSTGRES_PASSWORD: postgres
     PRESTRESS_TEST_DB: postgres://postgres:postgres@postgres/postgres
+  coverage: '/coverage: \d+.\d+% of statements/'
   artifacts:
     reports:
       coverage_report:
