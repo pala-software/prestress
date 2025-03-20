@@ -1,6 +1,7 @@
 {
   "cSpell.diagnosticLevel": "Hint",
   "direnv.watchForChanges": false,
+  "direnv.restart.automatic": true,
   "cSpell.words": [
     "dbname",
     "devenv",
