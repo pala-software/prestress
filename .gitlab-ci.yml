@@ -12,6 +12,7 @@ test:
     - go get github.com/boumenot/gocover-cobertura
     - go test ./pkg/prestress -coverprofile=coverage.txt -covermode count
     - go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
+    - sed -i "s=<source>.*</source>=<source>./</source>=g" coverage.xml
   variables:
     POSTGRES_PASSWORD: postgres
     PRESTRESS_TEST_DB: postgres://postgres:postgres@postgres/postgres
