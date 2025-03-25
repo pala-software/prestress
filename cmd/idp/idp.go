@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 type introspection struct {
@@ -62,7 +64,7 @@ func (idp *identityProvider) Prompt() {
 }
 
 func (idp identityProvider) ListenAndServe() {
-	http.HandleFunc("GET /introspect", idp.handleIntrospection)
+	http.HandleFunc("POST /introspect", idp.handleIntrospection)
 	err := http.ListenAndServe(":8081", nil)
 	log.Fatalln(err)
 }
@@ -71,18 +73,35 @@ func (idp identityProvider) handleIntrospection(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
-	tokenId := request.URL.Query().Get("token")
+	var err error
+
+	rawRequestBody, err := io.ReadAll(request.Body)
+	if err != nil {
+		fmt.Println(err)
+		writer.WriteHeader(500)
+		return
+	}
+
+	requestBody, err := url.ParseQuery(string(rawRequestBody))
+	if err != nil {
+		fmt.Println(err)
+		writer.WriteHeader(500)
+		return
+	}
+
+	tokenId := requestBody.Get("token")
 	if tokenId == "" {
 		writer.WriteHeader(400)
 		return
 	}
 
 	data := idp.data[tokenId]
-	body, err := json.Marshal(data)
+	responseBody, err := json.Marshal(data)
 	if err != nil {
+		fmt.Println(err)
 		writer.WriteHeader(500)
 		return
 	}
 
-	writer.Write(body)
+	writer.Write(responseBody)
 }

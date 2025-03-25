@@ -24,7 +24,10 @@ type AuthenticationResult struct {
 // If user can be authenticated from the request, pointer to result is returned.
 // Otherwise response is written and nil is returned.
 // TODO: Test
-func (server Server) Authenticate(writer http.ResponseWriter, request *http.Request) *AuthenticationResult {
+func (server Server) Authenticate(
+	writer http.ResponseWriter,
+	request *http.Request,
+) *AuthenticationResult {
 	authorization := request.Header.Get("Authorization")
 	if server.DisableAuth || authorization == "" {
 		return &AuthenticationResult{
@@ -39,11 +42,15 @@ func (server Server) Authenticate(writer http.ResponseWriter, request *http.Requ
 	}
 
 	introspectionUrl := *server.IntrospectionUrl
-	introspectionUrl.RawQuery = url.Values{
-		"token": []string{strings.TrimPrefix(authorization, "Bearer ")},
-	}.Encode()
 	introspectionUrl.User = url.UserPassword(server.ClientId, server.ClientSecret)
-	response, err := http.Get(introspectionUrl.String())
+	requestBody := strings.NewReader(url.Values{
+		"token": []string{strings.TrimPrefix(authorization, "Bearer ")},
+	}.Encode())
+	response, err := http.Post(
+		introspectionUrl.String(),
+		"application/x-www-form-urlencoded",
+		requestBody,
+	)
 	if err != nil {
 		fmt.Println(err)
 		writer.WriteHeader(500)
