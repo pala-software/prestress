@@ -27,13 +27,6 @@ type Server struct {
 }
 
 // TODO: Test
-func NewServer() Server {
-	server := Server{}
-	server.subscriptions = make(map[int]*Subscription)
-	return server
-}
-
-// TODO: Test
 func (server Server) Start() error {
 	if err := server.ReadConfiguration(); err != nil {
 		return err

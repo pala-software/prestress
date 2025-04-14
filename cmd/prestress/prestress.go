@@ -23,7 +23,7 @@ func main() {
 }
 
 func doStart() {
-	server := prestress.NewServer()
+	server := prestress.Server{}
 	err := server.Start()
 	if err != nil {
 		log.Fatalln(err)
@@ -31,7 +31,7 @@ func doStart() {
 }
 
 func doMigrate() {
-	server := prestress.NewServer()
+	server := prestress.Server{}
 	err := server.RunMigrations()
 	if err != nil {
 		log.Fatalln(err)
