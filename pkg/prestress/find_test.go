@@ -7,8 +7,6 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-var server prestress.Server
-
 func TestFindWithCancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

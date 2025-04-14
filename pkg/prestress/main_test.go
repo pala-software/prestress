@@ -15,6 +15,8 @@ import (
 //go:embed main_test.sql
 var mainTestMigrations embed.FS
 
+var server prestress.Server
+
 func TestMain(m *testing.M) {
 	var err error
 
