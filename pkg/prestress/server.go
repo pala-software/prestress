@@ -9,7 +9,6 @@ import (
 
 type Server struct {
 	DbConnStr     string
-	MigrationDir  string
 	Authenticator Authenticator
 	DB            *pgxpool.Pool
 	serveMux      *http.ServeMux
@@ -21,14 +20,10 @@ type Server struct {
 // Construct Server and read configuration from environment variables.
 func ServerFromEnv() Server {
 	server := Server{}
-
 	server.DbConnStr = os.Getenv("PRESTRESS_DB")
 	if server.DbConnStr == "" {
 		panic("empty or unset PRESTRESS_DB")
 	}
-
-	server.MigrationDir = os.Getenv("PRESTRESS_MIGRATIONS")
-
 	return server
 }
 

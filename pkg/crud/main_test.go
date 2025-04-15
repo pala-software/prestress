@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 	}
 
 	server.AddMigration("crud_test", migrations)
-	err = server.MigratePrestress()
+	err = server.Migrate()
 	if err != nil {
 		log.Fatalln(err)
 	}

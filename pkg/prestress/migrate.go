@@ -6,7 +6,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -106,7 +105,7 @@ func (server *Server) AddMigration(name string, directory fs.FS) {
 	)
 }
 
-func (server Server) MigratePrestress() error {
+func (server Server) Migrate() error {
 	var err error
 
 	dir, err := fs.Sub(migrations, "migrations")
@@ -133,14 +132,6 @@ func (server Server) MigratePrestress() error {
 	return nil
 }
 
-func (server Server) MigrateApp() error {
-	target := migrationTarget{
-		Name:      "app",
-		Directory: os.DirFS(server.MigrationDir),
-	}
-	return target.Migrate(server, false)
-}
-
 func (server Server) RunMigrations() error {
 	var err error
 
@@ -149,13 +140,9 @@ func (server Server) RunMigrations() error {
 		return err
 	}
 
-	err = server.MigratePrestress()
+	err = server.Migrate()
 	if err != nil {
 		return err
-	}
-
-	if server.MigrationDir != "" {
-		server.MigrateApp()
 	}
 
 	fmt.Println("Database is up to date!")

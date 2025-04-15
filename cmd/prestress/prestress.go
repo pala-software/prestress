@@ -6,6 +6,7 @@ import (
 
 	"gitlab.com/pala-software/prestress/pkg/cors"
 	"gitlab.com/pala-software/prestress/pkg/crud"
+	"gitlab.com/pala-software/prestress/pkg/migrator"
 	"gitlab.com/pala-software/prestress/pkg/oauth"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 	"gitlab.com/pala-software/prestress/pkg/subscribe"
@@ -33,6 +34,7 @@ func newServer() *prestress.Server {
 		crud.CrudFromEnv(),
 		oauth.OAuthFromEnv(),
 		subscribe.SubscribeFromEnv(),
+		migrator.MigratorFromEnv(),
 	)
 	return &server
 }
