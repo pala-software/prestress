@@ -7,13 +7,12 @@
     httpie
   ];
   env = {
-    PRESTRESS_ENVIRONMENT = "development";
     PRESTRESS_DB = "dbname=prestress_dev";
     PRESTRESS_TEST_DB = "dbname=prestress_test";
     PRESTRESS_ALLOWED_ORIGINS = "*";
-    PRESTRESS_AUTH_INTROSPECTION_URL = "http://localhost:8081/introspect";
-    PRESTRESS_AUTH_CLIENT_ID = "dev";
-    PRESTRESS_AUTH_CLIENT_SECRET = "dev";
+    PRESTRESS_OAUTH_INTROSPECTION_URL = "http://localhost:8081/introspect";
+    PRESTRESS_OAUTH_CLIENT_ID = "dev";
+    PRESTRESS_OAUTH_CLIENT_SECRET = "dev";
   };
   languages.go.enable = true;
   services.postgres = {

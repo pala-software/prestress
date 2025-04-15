@@ -28,10 +28,6 @@ LANGUAGE plpgsql
 SET client_min_messages TO warning
 AS $$
   BEGIN
-    CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_change
-    OF prestress.change
-    ON COMMIT DELETE ROWS;
-
     CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_auth
       (key TEXT PRIMARY KEY, value TEXT)
     ON COMMIT DELETE ROWS;

@@ -1,10 +1,10 @@
-package prestress_test
+package crud_test
 
 import (
 	"context"
 	"testing"
 
-	"gitlab.com/pala-software/prestress/pkg/prestress"
+	"gitlab.com/pala-software/prestress/pkg/crud"
 )
 
 func TestFindWithCancelledContext(t *testing.T) {
@@ -14,7 +14,7 @@ func TestFindWithCancelledContext(t *testing.T) {
 	err := expectItems(
 		ctx,
 		"find",
-		prestress.Where{},
+		crud.Where{},
 		[]string{},
 	)
 	if err != context.Canceled {
@@ -30,7 +30,7 @@ func TestFindAll(t *testing.T) {
 	err := expectItems(
 		context.Background(),
 		"find",
-		prestress.Where{},
+		crud.Where{},
 		[]string{"1", "2"},
 	)
 	if err != nil {
@@ -42,7 +42,7 @@ func TestFindWithFilter(t *testing.T) {
 	err := expectItems(
 		context.Background(),
 		"find",
-		prestress.Where{"value": "1"},
+		crud.Where{"value": "1"},
 		[]string{"1"},
 	)
 	if err != nil {

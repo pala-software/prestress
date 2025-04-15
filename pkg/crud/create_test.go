@@ -1,9 +1,10 @@
-package prestress_test
+package crud_test
 
 import (
 	"context"
 	"testing"
 
+	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -14,7 +15,7 @@ func TestCreateWithCancelledContext(t *testing.T) {
 	cancel()
 
 	auth := prestress.AuthenticationResult{
-		Role:      "anonymous",
+		Role:      prestress.AnonymousRole,
 		Variables: map[string]any{},
 	}
 	schema := "test"
@@ -23,7 +24,7 @@ func TestCreateWithCancelledContext(t *testing.T) {
 		"value": "withCancelledContext",
 	}
 
-	err = server.Create(ctx, auth, schema, table, data)
+	err = feature.Create(ctx, auth, schema, table, data)
 	if err != context.Canceled {
 		t.Errorf(
 			"expected error to be '%v', got '%v'",
@@ -36,7 +37,7 @@ func TestCreateWithCancelledContext(t *testing.T) {
 	err = expectItems(
 		context.Background(),
 		"create",
-		prestress.Where{"value": "withCancelledContext"},
+		crud.Where{"value": "withCancelledContext"},
 		[]string{},
 	)
 	if err != nil {
@@ -59,7 +60,7 @@ func TestCreate(t *testing.T) {
 		"value": "3",
 	}
 
-	err = server.Create(ctx, auth, schema, table, data)
+	err = feature.Create(ctx, auth, schema, table, data)
 	if err != nil {
 		t.Error(err)
 		return
@@ -68,7 +69,7 @@ func TestCreate(t *testing.T) {
 	err = expectItems(
 		context.Background(),
 		"create",
-		prestress.Where{"value": "3"},
+		crud.Where{"value": "3"},
 		[]string{"3"},
 	)
 	if err != nil {

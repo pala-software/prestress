@@ -1,9 +1,10 @@
-package prestress_test
+package crud_test
 
 import (
 	"context"
 	"testing"
 
+	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -22,7 +23,7 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 	}
 	schema := "test"
 	table := "update"
-	where := prestress.Where{"value": oldValue}
+	where := crud.Where{"value": oldValue}
 	data := map[string]any{"value": newValue}
 
 	err = expectItems(context.Background(), table, where, []string{oldValue})
@@ -31,7 +32,7 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 		return
 	}
 
-	err = server.Update(ctx, auth, schema, table, where, data)
+	err = feature.Update(ctx, auth, schema, table, where, data)
 	if err != context.Canceled {
 		t.Errorf(
 			"expected error to be '%v', got '%v'",
@@ -61,7 +62,7 @@ func TestUpdate(t *testing.T) {
 	}
 	schema := "test"
 	table := "update"
-	where := prestress.Where{"value": oldValue}
+	where := crud.Where{"value": oldValue}
 	data := map[string]any{"value": newValue}
 
 	err = expectItems(ctx, table, where, []string{oldValue})
@@ -70,7 +71,7 @@ func TestUpdate(t *testing.T) {
 		return
 	}
 
-	err = server.Update(ctx, auth, schema, table, where, data)
+	err = feature.Update(ctx, auth, schema, table, where, data)
 	if err != nil {
 		t.Error(err)
 		return

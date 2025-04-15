@@ -11,7 +11,6 @@ import (
 
 var ErrForbiddenSchema = errors.New("forbidden schema")
 
-// TODO: Test
 func (server Server) Begin(
 	ctx context.Context,
 	auth AuthenticationResult,
@@ -54,7 +53,12 @@ func (server Server) Begin(
 		return nil, err
 	}
 
-	encodedVariables, err := json.Marshal(auth.Variables)
+	variables := map[string]any{}
+	if auth.Variables != nil {
+		variables = auth.Variables
+	}
+
+	encodedVariables, err := json.Marshal(variables)
 	if err != nil {
 		tx.Rollback(ctx)
 		return nil, err
@@ -62,7 +66,7 @@ func (server Server) Begin(
 
 	_, err = tx.Exec(
 		ctx,
-		`SELECT prestress.begin_authorized($1)`,
+		"SELECT prestress.begin_authorized($1)",
 		encodedVariables,
 	)
 	if err != nil {

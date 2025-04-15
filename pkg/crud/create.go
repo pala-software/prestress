@@ -1,4 +1,4 @@
-package prestress
+package crud
 
 import (
 	"context"
@@ -10,19 +10,44 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-// TODO: Test
-func (server Server) Create(
+const CreateOperation = "Create"
+
+func (feature Crud) Create(
 	ctx context.Context,
-	auth AuthenticationResult,
+	auth prestress.AuthenticationResult,
 	schema string,
 	table string,
 	data map[string]any,
 ) error {
 	var err error
 
-	tx, err := server.Begin(ctx, auth, schema)
+	err = feature.server.Emit(BeforeBeginOperationEvent{
+		OperationName: CreateOperation,
+		Auth:          &auth,
+		Schema:        &schema,
+		Table:         &table,
+		Context:       ctx,
+	})
+	if err != nil {
+		return err
+	}
+
+	tx, err := feature.server.Begin(ctx, auth, schema)
+	if err != nil {
+		return err
+	}
+
+	err = feature.server.Emit(AfterBeginOperationEvent{
+		OperationName: CreateOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Transaction:   tx,
+		Context:       ctx,
+	})
 	if err != nil {
 		return err
 	}
@@ -36,6 +61,7 @@ func (server Server) Create(
 			),
 		)
 		if err != nil {
+			tx.Rollback(ctx)
 			return err
 		}
 	} else {
@@ -61,12 +87,21 @@ func (server Server) Create(
 			values...,
 		)
 		if err != nil {
+			tx.Rollback(ctx)
 			return err
 		}
 	}
 
-	err = server.collectChanges(ctx, tx)
+	err = feature.server.Emit(BeforeCommitOperationEvent{
+		OperationName: CreateOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Transaction:   tx,
+		Context:       ctx,
+	})
 	if err != nil {
+		tx.Rollback(ctx)
 		return err
 	}
 
@@ -75,11 +110,21 @@ func (server Server) Create(
 		return err
 	}
 
+	err = feature.server.Emit(AfterCommitOperationEvent{
+		OperationName: CreateOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Context:       ctx,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// TODO: Test
-func (server Server) handleCreate(
+func (feature Crud) handleCreate(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -108,14 +153,14 @@ func (server Server) handleCreate(
 		return
 	}
 
-	auth := server.Authenticate(writer, request)
+	auth := feature.server.Authenticate(writer, request)
 	if auth == nil {
 		return
 	}
 
-	err = server.Create(request.Context(), *auth, schema, table, data)
+	err = feature.Create(request.Context(), *auth, schema, table, data)
 	if err != nil {
-		handleOperationError(writer, err)
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 

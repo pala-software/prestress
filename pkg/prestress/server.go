@@ -2,35 +2,48 @@ package prestress
 
 import (
 	"net/http"
-	"net/url"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Server struct {
-	// Configuration
-	Environment      Environment
-	DbConnStr        string
-	MigrationDir     string
-	AllowedOrigins   string
-	DisableAuth      bool
-	ClientId         string
-	ClientSecret     string
-	IntrospectionUrl *url.URL
-
-	// Connections
-	DB   *pgxpool.Pool
-	HTTP *http.Server
-
-	// State
-	subscriptions map[int]*Subscription
+	DbConnStr     string
+	MigrationDir  string
+	Authenticator Authenticator
+	DB            *pgxpool.Pool
+	serveMux      *http.ServeMux
+	listeners     []EventListener
+	middleware    []Middleware
+	migrations    []migrationTarget
 }
 
-// TODO: Test
-func (server Server) Start() error {
-	if err := server.ReadConfiguration(); err != nil {
-		return err
+// Construct Server and read configuration from environment variables.
+func ServerFromEnv() Server {
+	server := Server{}
+
+	server.DbConnStr = os.Getenv("PRESTRESS_DB")
+	if server.DbConnStr == "" {
+		panic("empty or unset PRESTRESS_DB")
 	}
+
+	server.MigrationDir = os.Getenv("PRESTRESS_MIGRATIONS")
+
+	return server
+}
+
+func (server *Server) ApplyFeatures(features ...Feature) error {
+	var err error
+	for _, feature := range features {
+		err = feature.Apply(server)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (server *Server) Start() error {
 	if err := server.ConnectToDatabase(); err != nil {
 		return err
 	}

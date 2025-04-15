@@ -1,9 +1,10 @@
-package prestress_test
+package crud_test
 
 import (
 	"context"
 	"testing"
 
+	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -19,7 +20,7 @@ func TestDeleteWithCancelledContext(t *testing.T) {
 	}
 	schema := "test"
 	table := "delete"
-	where := prestress.Where{"value": "1"}
+	where := crud.Where{"value": "1"}
 
 	err = expectItems(context.Background(), table, where, []string{"1"})
 	if err != nil {
@@ -27,7 +28,7 @@ func TestDeleteWithCancelledContext(t *testing.T) {
 		return
 	}
 
-	err = server.Delete(ctx, auth, schema, table, where)
+	err = feature.Delete(ctx, auth, schema, table, where)
 	if err != context.Canceled {
 		t.Errorf(
 			"expected error to be '%v', got '%v'",
@@ -54,7 +55,7 @@ func TestDelete(t *testing.T) {
 	}
 	schema := "test"
 	table := "delete"
-	where := prestress.Where{"value": "2"}
+	where := crud.Where{"value": "2"}
 
 	err = expectItems(ctx, table, where, []string{"2"})
 	if err != nil {
@@ -62,7 +63,7 @@ func TestDelete(t *testing.T) {
 		return
 	}
 
-	err = server.Delete(ctx, auth, schema, table, where)
+	err = feature.Delete(ctx, auth, schema, table, where)
 	if err != nil {
 		t.Error(err)
 		return

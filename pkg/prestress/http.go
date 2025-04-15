@@ -4,55 +4,37 @@ import (
 	"net/http"
 )
 
-// TODO: Test
+type Middleware func(http.Handler) http.Handler
+
+func (server *Server) HTTP() *http.ServeMux {
+	if server.serveMux == nil {
+		server.serveMux = http.NewServeMux()
+	}
+	return server.serveMux
+}
+
+func (server *Server) AddMiddleware(middleware Middleware) {
+	server.middleware = append(server.middleware, middleware)
+}
+
 func (server *Server) StartHttpServer() error {
 	var err error
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc(
-		"OPTIONS /{schema}/{table}",
-		server.handleTableOptions,
-	)
-	mux.HandleFunc(
-		"OPTIONS /{schema}/{table}/subscription",
-		server.handleSubscriptionOptions,
-	)
-
-	mux.HandleFunc("GET /{schema}/{table}", server.handleFind)
-	mux.HandleFunc("POST /{schema}/{table}", server.handleCreate)
-	mux.HandleFunc("PATCH /{schema}/{table}", server.handleUpdate)
-	mux.HandleFunc("DELETE /{schema}/{table}", server.handleDelete)
-	mux.HandleFunc("GET /{schema}/{table}/subscription", server.handleSubscription)
-
-	server.HTTP = &http.Server{
-		Addr:    ":8080", // TODO: Allow configuring
-		Handler: server.handleCors(mux),
+	// Apply middleware
+	handler := http.Handler(server.HTTP())
+	for _, middleware := range server.middleware {
+		handler = middleware(handler)
 	}
-	err = server.HTTP.ListenAndServe()
+
+	// Start server
+	srv := &http.Server{
+		Addr:    ":8080", // TODO: Allow configuring
+		Handler: handler,
+	}
+	err = srv.ListenAndServe()
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (server Server) handleTableOptions(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	writer.Header().Set("Allow", "OPTIONS, GET, POST, PATCH, DELETE")
-	writer.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PATCH, DELETE")
-	writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	writer.WriteHeader(204)
-}
-
-func (server Server) handleSubscriptionOptions(
-	writer http.ResponseWriter,
-	request *http.Request,
-) {
-	writer.Header().Set("Allow", "OPTIONS, GET")
-	writer.Header().Set("Access-Control-Allow-Methods", "OPTIONS, GET")
-	writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	writer.WriteHeader(204)
 }

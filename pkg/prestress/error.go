@@ -8,8 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// TODO: Test
-func handleOperationError(writer http.ResponseWriter, err error) {
+func HandleDatabaseError(writer http.ResponseWriter, err error) {
 	switch err {
 	case pgx.ErrNoRows:
 		writer.WriteHeader(404)

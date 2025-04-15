@@ -1,4 +1,4 @@
-package prestress_test
+package crud_test
 
 import (
 	"context"
@@ -9,33 +9,33 @@ import (
 	"os"
 	"testing"
 
+	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
 //go:embed main_test.sql
-var mainTestMigrations embed.FS
+var migrations embed.FS
 
+var feature crud.Crud
 var server prestress.Server
 
 func TestMain(m *testing.M) {
 	var err error
 
-	server = prestress.Server{}
-	server.Environment = prestress.Development
 	server.DbConnStr = os.Getenv("PRESTRESS_TEST_DB")
-	server.DisableAuth = true
+
+	err = server.ApplyFeatures(&feature)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	err = server.ConnectToDatabase()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	server.AddMigration("crud_test", migrations)
 	err = server.MigratePrestress()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = server.Migrate("main_test", mainTestMigrations, true)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 func expectItems(
 	ctx context.Context,
 	table string,
-	where prestress.Where,
+	where crud.Where,
 	expectedValues []string,
 ) error {
 	auth := prestress.AuthenticationResult{
@@ -56,7 +56,7 @@ func expectItems(
 	}
 	schema := "test"
 
-	result, err := server.Find(ctx, auth, schema, table, where, 100, 0)
+	result, err := feature.Find(ctx, auth, schema, table, where, 100, 0)
 	if err != nil {
 		return err
 	}

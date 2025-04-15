@@ -24,6 +24,9 @@
 - [x] CORS
 - [x] Document configuration
 - [x] CI for tests and coverage
+- [x] Extension point for HTTP handlers
+- [x] Authenticator interface
+- [x] Events
 - [ ] Improve test coverage
 - [ ] Package for Nix
 - [ ] Docker container images

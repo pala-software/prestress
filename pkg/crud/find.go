@@ -1,4 +1,4 @@
-package prestress
+package crud
 
 import (
 	"context"
@@ -8,16 +8,19 @@ import (
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
+	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
+
+const FindOperation = "Find"
 
 type FindResult struct {
 	Rows pgx.Rows
 	Done func()
 }
 
-func (server Server) Find(
+func (feature Crud) Find(
 	ctx context.Context,
-	auth AuthenticationResult,
+	auth prestress.AuthenticationResult,
 	schema string,
 	table string,
 	where Where,
@@ -26,7 +29,30 @@ func (server Server) Find(
 ) (*FindResult, error) {
 	var err error
 
-	tx, err := server.Begin(ctx, auth, schema)
+	err = feature.server.Emit(BeforeBeginOperationEvent{
+		OperationName: FindOperation,
+		Auth:          &auth,
+		Schema:        &schema,
+		Table:         &table,
+		Context:       ctx,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := feature.server.Begin(ctx, auth, schema)
+	if err != nil {
+		return nil, err
+	}
+
+	err = feature.server.Emit(AfterBeginOperationEvent{
+		OperationName: FindOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Transaction:   tx,
+		Context:       ctx,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -51,16 +77,43 @@ func (server Server) Find(
 		Rows: rows,
 		Done: func() {
 			rows.Close()
+
+			err = feature.server.Emit(BeforeCommitOperationEvent{
+				OperationName: FindOperation,
+				Auth:          auth,
+				Schema:        schema,
+				Table:         table,
+				Transaction:   tx,
+				Context:       ctx,
+			})
+			if err != nil {
+				fmt.Println(err)
+				tx.Rollback(ctx)
+				return
+			}
+
 			err := tx.Commit(ctx)
 			if err != nil {
 				fmt.Println(err)
+				return
+			}
+
+			err = feature.server.Emit(AfterCommitOperationEvent{
+				OperationName: FindOperation,
+				Auth:          auth,
+				Schema:        schema,
+				Table:         table,
+				Context:       ctx,
+			})
+			if err != nil {
+				fmt.Println(err)
+				return
 			}
 		},
 	}, nil
 }
 
-// TODO: Test
-func (server Server) handleFind(
+func (feature Crud) handleFind(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -90,12 +143,12 @@ func (server Server) handleFind(
 		}
 	}
 
-	auth := server.Authenticate(writer, request)
+	auth := feature.server.Authenticate(writer, request)
 	if auth == nil {
 		return
 	}
 
-	result, err := server.Find(
+	result, err := feature.Find(
 		request.Context(),
 		*auth,
 		schema,
@@ -105,7 +158,7 @@ func (server Server) handleFind(
 		offset,
 	)
 	if err != nil {
-		handleOperationError(writer, err)
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
@@ -149,7 +202,7 @@ func (server Server) handleFind(
 
 	err = result.Rows.Err()
 	if err != nil {
-		handleOperationError(writer, err)
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 

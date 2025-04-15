@@ -44,16 +44,15 @@ Prestress is in early development. It's not ready for use in production.
 Configuration for Prestress is set using environment variables. The table below
 outlines possible variables that may be defined.
 
-| Name (\* = Mandatory)            | Possible values                        |
-| -------------------------------- | -------------------------------------- |
-| PRESTRESS_ENVIRONMENT \*         | `development` or `production`          |
-| PRESTRESS_DB \*                  | [PostgreSQL connection string][1]      |
-| PRESTRESS_MIGRATIONS             | Absolute or relative file path         |
-| PRESTRESS_ALLOWED_ORIGINS        | [HTTP origins to allow][2]             |
-| PRESTRESS_AUTH_DISABLE           | `1`                                    |
-| PRESTRESS_AUTH_INTROSPECTION_URL | [OAuth2 introspection URL][3]          |
-| PRESTRESS_AUTH_CLIENT_ID         | [OAuth2 client ID for this app][4]     |
-| PRESTRESS_AUTH_CLIENT_SECRET     | [OAuth2 client secret for this app][5] |
+| Name (\* = Mandatory)             | Possible values                        |
+| --------------------------------- | -------------------------------------- |
+| PRESTRESS_DB \*                   | [PostgreSQL connection string][1]      |
+| PRESTRESS_MIGRATIONS              | Absolute or relative file path         |
+| PRESTRESS_ALLOWED_ORIGINS         | [HTTP origins to allow][2]             |
+| PRESTRESS_OAUTH_DISABLE           | `1`                                    |
+| PRESTRESS_OAUTH_INTROSPECTION_URL | [OAuth2 introspection URL][3]          |
+| PRESTRESS_OAUTH_CLIENT_ID         | [OAuth2 client ID for this app][4]     |
+| PRESTRESS_OAUTH_CLIENT_SECRET     | [OAuth2 client secret for this app][5] |
 
 [1]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
 [2]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin

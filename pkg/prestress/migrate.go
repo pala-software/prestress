@@ -14,8 +14,12 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-// TODO: Test
-func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
+type migrationTarget struct {
+	Name      string
+	Directory fs.FS
+}
+
+func (target migrationTarget) Migrate(server Server, forceRunAll bool) error {
 	var err error
 	ctx := context.Background()
 
@@ -30,10 +34,10 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 		return err
 	}
 
-	if (initialized == nil || !*initialized) && target != "prestress" {
+	if (initialized == nil || !*initialized) && target.Name != "prestress" {
 		return fmt.Errorf(
 			"cannot migrate %s, initial prestress migration has not been run",
-			target,
+			target.Name,
 		)
 	}
 
@@ -45,7 +49,7 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 			`SELECT value
 			FROM prestress.database_variable
 			WHERE name = $1`,
-			target+"_version",
+			target.Name+"_version",
 		).Scan(&variable)
 		if err != nil && err != pgx.ErrNoRows {
 			return err
@@ -56,7 +60,7 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 		}
 	}
 
-	entries, err := fs.ReadDir(dir, ".")
+	entries, err := fs.ReadDir(target.Directory, ".")
 	if err != nil {
 		return err
 	}
@@ -68,12 +72,12 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 			continue
 		}
 
-		migration, err := fs.ReadFile(dir, name)
+		migration, err := fs.ReadFile(target.Directory, name)
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Running migration %s...\n", name)
+		fmt.Printf("Running migration for %s: %s\n", target.Name, name)
 		_, err = server.DB.Exec(ctx, string(migration))
 		if err != nil {
 			return err
@@ -84,7 +88,7 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 			`INSERT INTO prestress.database_variable (name, value)
 			VALUES ($1, $2)
 			ON CONFLICT (name) DO UPDATE SET value = $2`,
-			target+"_version",
+			target.Name+"_version",
 			name,
 		)
 		if err != nil {
@@ -95,24 +99,50 @@ func (server Server) Migrate(target string, dir fs.FS, forceRunAll bool) error {
 	return nil
 }
 
-// TODO: Test
+func (server *Server) AddMigration(name string, directory fs.FS) {
+	server.migrations = append(
+		server.migrations,
+		migrationTarget{Name: name, Directory: directory},
+	)
+}
+
 func (server Server) MigratePrestress() error {
+	var err error
+
 	dir, err := fs.Sub(migrations, "migrations")
 	if err != nil {
 		return err
 	}
 
-	return server.Migrate("prestress", dir, false)
-}
-
-// TODO: Test
-func (server Server) RunMigrations() error {
-	var err error
-
-	err = server.ReadConfiguration()
+	target := migrationTarget{
+		Name:      "prestress",
+		Directory: dir,
+	}
+	err = target.Migrate(server, false)
 	if err != nil {
 		return err
 	}
+
+	for _, target := range server.migrations {
+		err = target.Migrate(server, false)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (server Server) MigrateApp() error {
+	target := migrationTarget{
+		Name:      "app",
+		Directory: os.DirFS(server.MigrationDir),
+	}
+	return target.Migrate(server, false)
+}
+
+func (server Server) RunMigrations() error {
+	var err error
 
 	err = server.ConnectToDatabase()
 	if err != nil {
@@ -125,11 +155,7 @@ func (server Server) RunMigrations() error {
 	}
 
 	if server.MigrationDir != "" {
-		dir := os.DirFS(server.MigrationDir)
-		err = server.Migrate("app", dir, false)
-		if err != nil {
-			return err
-		}
+		server.MigrateApp()
 	}
 
 	fmt.Println("Database is up to date!")

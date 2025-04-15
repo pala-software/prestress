@@ -1,4 +1,4 @@
-package prestress
+package crud
 
 import (
 	"context"
@@ -10,12 +10,14 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-// TODO: Test
-func (server Server) Update(
+const UpdateOperation = "Update"
+
+func (feature Crud) Update(
 	ctx context.Context,
-	auth AuthenticationResult,
+	auth prestress.AuthenticationResult,
 	schema string,
 	table string,
 	where Where,
@@ -27,7 +29,30 @@ func (server Server) Update(
 		return nil
 	}
 
-	tx, err := server.Begin(ctx, auth, schema)
+	err = feature.server.Emit(BeforeBeginOperationEvent{
+		OperationName: UpdateOperation,
+		Auth:          &auth,
+		Schema:        &schema,
+		Table:         &table,
+		Context:       ctx,
+	})
+	if err != nil {
+		return err
+	}
+
+	tx, err := feature.server.Begin(ctx, auth, schema)
+	if err != nil {
+		return err
+	}
+
+	err = feature.server.Emit(AfterBeginOperationEvent{
+		OperationName: UpdateOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Transaction:   tx,
+		Context:       ctx,
+	})
 	if err != nil {
 		return err
 	}
@@ -67,7 +92,14 @@ func (server Server) Update(
 		return err
 	}
 
-	err = server.collectChanges(ctx, tx)
+	err = feature.server.Emit(BeforeCommitOperationEvent{
+		OperationName: UpdateOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Transaction:   tx,
+		Context:       ctx,
+	})
 	if err != nil {
 		tx.Rollback(ctx)
 		return err
@@ -78,11 +110,21 @@ func (server Server) Update(
 		return err
 	}
 
+	err = feature.server.Emit(AfterCommitOperationEvent{
+		OperationName: UpdateOperation,
+		Auth:          auth,
+		Schema:        schema,
+		Table:         table,
+		Context:       ctx,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// TODO: Test
-func (server Server) handleUpdate(
+func (feature Crud) handleUpdate(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -114,12 +156,12 @@ func (server Server) handleUpdate(
 		return
 	}
 
-	auth := server.Authenticate(writer, request)
+	auth := feature.server.Authenticate(writer, request)
 	if auth == nil {
 		return
 	}
 
-	err = server.Update(
+	err = feature.Update(
 		request.Context(),
 		*auth,
 		schema,
@@ -128,7 +170,7 @@ func (server Server) handleUpdate(
 		data,
 	)
 	if err != nil {
-		handleOperationError(writer, err)
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 

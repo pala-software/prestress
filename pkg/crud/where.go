@@ -1,4 +1,4 @@
-package prestress
+package crud
 
 import (
 	"fmt"
@@ -35,7 +35,6 @@ func ParseWhere(query url.Values) Where {
 	return where
 }
 
-// TODO: Test
 func (where Where) String(table string, paramStart int) string {
 	if len(where) == 0 {
 		return ""
@@ -57,7 +56,6 @@ func (where Where) String(table string, paramStart int) string {
 	return "WHERE " + strings.Join(conditions, " AND ")
 }
 
-// TODO: Test
 func (where Where) Values() []any {
 	values := make([]any, 0, len(where))
 	for _, value := range where {

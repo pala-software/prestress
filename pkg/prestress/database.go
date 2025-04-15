@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// TODO: Test
 func (server *Server) ConnectToDatabase() error {
 	var err error
 
