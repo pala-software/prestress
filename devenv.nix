@@ -13,6 +13,8 @@
     PRESTRESS_OAUTH_INTROSPECTION_URL = "http://localhost:8081/introspect";
     PRESTRESS_OAUTH_CLIENT_ID = "dev";
     PRESTRESS_OAUTH_CLIENT_SECRET = "dev";
+    OTEL_SERVICE_NAME = "prestress";
+    OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4318";
   };
   languages.go.enable = true;
   services.postgres = {
