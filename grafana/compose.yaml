@@ -1,0 +1,22 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - 3000:3000
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - 3200:3200
+      - 4318:4318
+
+  mimir:
+    image: grafana/mimir:latest
+    command: ["-config.file=/etc/mimir/mimir.yaml"]
+    volumes:
+      - ./mimir.yaml:/etc/mimir/mimir.yaml:ro
+    ports:
+      - 9009:9009

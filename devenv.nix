@@ -14,7 +14,8 @@
     PRESTRESS_OAUTH_CLIENT_ID = "dev";
     PRESTRESS_OAUTH_CLIENT_SECRET = "dev";
     OTEL_SERVICE_NAME = "prestress";
-    OTEL_EXPORTER_OTLP_ENDPOINT = "http://localhost:4318";
+    OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "http://localhost:4318/v1/traces";
+    OTEL_EXPORTER_OTLP_METRICS_ENDPOINT = "http://localhost:9009/otlp/v1/metrics";
   };
   languages.go.enable = true;
   services.postgres = {
