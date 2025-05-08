@@ -20,3 +20,11 @@ services:
       - ./mimir.yaml:/etc/mimir/mimir.yaml:ro
     ports:
       - 9009:9009
+
+  loki:
+    image: grafana/loki:latest
+    command: ["-config.file=/mnt/config/loki.yaml"]
+    volumes:
+      - ./loki.yaml:/mnt/config/loki.yaml:ro
+    ports:
+      - 3100:3100
