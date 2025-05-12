@@ -53,6 +53,9 @@ outlines possible variables that may be defined.
 | PRESTRESS_OAUTH_INTROSPECTION_URL | [OAuth2 introspection URL][3]          |
 | PRESTRESS_OAUTH_CLIENT_ID         | [OAuth2 client ID for this app][4]     |
 | PRESTRESS_OAUTH_CLIENT_SECRET     | [OAuth2 client secret for this app][5] |
+| PRESTRESS_OTEL_TRACES_ENABLE      | `1`                                    |
+| PRESTRESS_OTEL_METRICS_ENABLE     | `1`                                    |
+| PRESTRESS_OTEL_LOGS_ENABLE        | `1`                                    |
 
 [1]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
 [2]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin

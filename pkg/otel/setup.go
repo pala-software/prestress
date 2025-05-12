@@ -3,7 +3,6 @@ package otel
 import (
 	"context"
 	"errors"
-	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -16,9 +15,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// setupOTelSDK bootstraps the OpenTelemetry pipeline.
+// Bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+func (feature OTel) setup(ctx context.Context) (shutdown func(context.Context) error, err error) {
 	var shutdownFuncs []func(context.Context) error
 
 	// shutdown calls cleanup functions registered via shutdownFuncs.
@@ -42,32 +41,41 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	prop := newPropagator()
 	otel.SetTextMapPropagator(prop)
 
-	// Set up trace provider.
-	tracerProvider, err := newTracerProvider(ctx)
-	if err != nil {
-		handleErr(err)
-		return
+	if feature.TracesEnabled {
+		// Set up trace provider.
+		var tracerProvider *trace.TracerProvider
+		tracerProvider, err = newTracerProvider(ctx)
+		if err != nil {
+			handleErr(err)
+			return
+		}
+		shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
+		otel.SetTracerProvider(tracerProvider)
 	}
-	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
-	otel.SetTracerProvider(tracerProvider)
 
 	// Set up meter provider.
-	meterProvider, err := newMeterProvider(ctx)
-	if err != nil {
-		handleErr(err)
-		return
+	if feature.MetricsEnabled {
+		var meterProvider *metric.MeterProvider
+		meterProvider, err = newMeterProvider(ctx)
+		if err != nil {
+			handleErr(err)
+			return
+		}
+		shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
+		otel.SetMeterProvider(meterProvider)
 	}
-	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
-	otel.SetMeterProvider(meterProvider)
 
 	// Set up logger provider.
-	loggerProvider, err := newLoggerProvider(ctx)
-	if err != nil {
-		handleErr(err)
-		return
+	if feature.LogsEnabled {
+		var loggerProvider *log.LoggerProvider
+		loggerProvider, err = newLoggerProvider(ctx)
+		if err != nil {
+			handleErr(err)
+			return
+		}
+		shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
+		global.SetLoggerProvider(loggerProvider)
 	}
-	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
-	global.SetLoggerProvider(loggerProvider)
 
 	return
 }
@@ -86,9 +94,7 @@ func newTracerProvider(ctx context.Context) (*trace.TracerProvider, error) {
 	}
 
 	tracerProvider := trace.NewTracerProvider(
-		trace.WithBatcher(traceExporter,
-			// Default is 5s. Set to 1s for demonstrative purposes.
-			trace.WithBatchTimeout(time.Second)),
+		trace.WithBatcher(traceExporter),
 	)
 	return tracerProvider, nil
 }
@@ -100,9 +106,7 @@ func newMeterProvider(ctx context.Context) (*metric.MeterProvider, error) {
 	}
 
 	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(metricExporter,
-			// Default is 1m. Set to 3s for demonstrative purposes.
-			metric.WithInterval(3*time.Second))),
+		metric.WithReader(metric.NewPeriodicReader(metricExporter)),
 	)
 	return meterProvider, nil
 }

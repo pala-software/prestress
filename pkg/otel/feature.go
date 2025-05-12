@@ -2,6 +2,7 @@ package otel
 
 import (
 	"context"
+	"os"
 
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 	"go.opentelemetry.io/contrib/bridges/otelslog"
@@ -12,14 +13,21 @@ var name = "gitlab.com/pala-software/prestress/pkg/otel"
 var logger = otelslog.NewLogger(name)
 
 type OTel struct {
+	TracesEnabled  bool
+	MetricsEnabled bool
+	LogsEnabled    bool
 }
 
 func OTelFromEnv() *OTel {
-	return &OTel{}
+	feature := OTel{}
+	feature.TracesEnabled = os.Getenv("PRESTRESS_OTEL_TRACES_ENABLE") == "1"
+	feature.MetricsEnabled = os.Getenv("PRESTRESS_OTEL_METRICS_ENABLE") == "1"
+	feature.LogsEnabled = os.Getenv("PRESTRESS_OTEL_METRICS_ENABLE") == "1"
+	return &feature
 }
 
 func (feature OTel) Apply(server *prestress.Server) error {
-	otelShutdown, err := setupOTelSDK(context.Background())
+	otelShutdown, err := feature.setup(context.Background())
 	if err != nil {
 		return err
 	}
