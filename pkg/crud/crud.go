@@ -1,12 +1,16 @@
 package crud
 
 import (
+	"fmt"
 	"net/http"
 
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
 type Crud struct {
+	// Root path where CRUD resources can be accessed.
+	RootPath string
+
 	server *prestress.Server
 }
 
@@ -19,12 +23,37 @@ func CrudFromEnv() *Crud {
 
 func (feature *Crud) Apply(server *prestress.Server) error {
 	feature.server = server
+
+	rootPath := "/"
+	if feature.RootPath != "" {
+		rootPath = feature.RootPath
+	}
+	if rootPath == "/" {
+		rootPath = ""
+	}
+
 	mux := feature.server.HTTP()
-	mux.HandleFunc("OPTIONS /{schema}/{table}", feature.handleTableOptions)
-	mux.HandleFunc("GET /{schema}/{table}", feature.handleFind)
-	mux.HandleFunc("POST /{schema}/{table}", feature.handleCreate)
-	mux.HandleFunc("PATCH /{schema}/{table}", feature.handleUpdate)
-	mux.HandleFunc("DELETE /{schema}/{table}", feature.handleDelete)
+	mux.HandleFunc(
+		fmt.Sprintf("OPTIONS %s/{schema}/{table}", rootPath),
+		feature.handleTableOptions,
+	)
+	mux.HandleFunc(
+		fmt.Sprintf("GET %s/{schema}/{table}", rootPath),
+		feature.handleFind,
+	)
+	mux.HandleFunc(
+		fmt.Sprintf("POST %s/{schema}/{table}", rootPath),
+		feature.handleCreate,
+	)
+	mux.HandleFunc(
+		fmt.Sprintf("PATCH %s/{schema}/{table}", rootPath),
+		feature.handleUpdate,
+	)
+	mux.HandleFunc(
+		fmt.Sprintf("DELETE %s/{schema}/{table}", rootPath),
+		feature.handleDelete,
+	)
+
 	return nil
 }
 

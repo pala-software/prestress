@@ -2,6 +2,7 @@ package subscribe
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 
 	"gitlab.com/pala-software/prestress/pkg/crud"
@@ -12,11 +13,16 @@ import (
 var migrations embed.FS
 
 type Subscribe struct {
+	// If root path is adjusted for CRUD feature, this must be set to match that
+	// path.
+	CrudRootPath string
+
 	server        *prestress.Server
 	subscriptions map[int]*Subscription
 }
 
-// Construct Subscribe Feature and read configuration from environment variables.
+// Construct Subscribe Feature and read configuration from environment
+// variables.
 func SubscribeFromEnv() *Subscribe {
 	feature := Subscribe{}
 	// No configuration at this time
@@ -27,13 +33,27 @@ func (feature Subscribe) Apply(server *prestress.Server) error {
 	feature.server = server
 	feature.subscriptions = map[int]*Subscription{}
 
+	rootPath := "/"
+	if feature.CrudRootPath != "" {
+		rootPath = feature.CrudRootPath
+	}
+	if rootPath == "/" {
+		rootPath = ""
+	}
+
 	http := server.HTTP()
 	http.HandleFunc(
-		"OPTIONS /{schema}/{table}/subscription",
+		fmt.Sprintf(
+			"OPTIONS %s/{schema}/{table}/subscription",
+			feature.CrudRootPath,
+		),
 		feature.handleSubscriptionOptions,
 	)
 	http.HandleFunc(
-		"GET /{schema}/{table}/subscription",
+		fmt.Sprintf(
+			"GET %s/{schema}/{table}/subscription",
+			feature.CrudRootPath,
+		),
 		feature.handleSubscription,
 	)
 
