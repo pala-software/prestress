@@ -3,6 +3,9 @@ package prestress
 type Event interface {
 	// Description of the event
 	Event() string
+
+	// Details for logging
+	Details() map[string]string
 }
 
 type EventListener func(event Event) error

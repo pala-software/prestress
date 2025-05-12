@@ -1,6 +1,9 @@
 package prestress
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 // TODO: Make default roles configurable
 const AnonymousRole = "anonymous"
@@ -12,6 +15,16 @@ type AuthenticationResult struct {
 
 	// Always set to some role name. It's anonymous if user is not authenticated.
 	Role string
+}
+
+// Details for logging
+func (result AuthenticationResult) Details() map[string]string {
+	details := make(map[string]string, len(result.Variables)+1)
+	details["role"] = result.Role
+	for key, val := range result.Variables {
+		details[key] = fmt.Sprint(val)
+	}
+	return details
 }
 
 type Authenticator interface {
