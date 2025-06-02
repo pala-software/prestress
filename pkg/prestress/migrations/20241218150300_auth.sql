@@ -14,7 +14,7 @@ AS $$
       SELECT var.value
       INTO value
       FROM pg_temp.prestress_auth AS var
-      WHERE name = key;
+      WHERE var.key = auth.key;
       RETURN value;
     ELSE
       return NULL;
