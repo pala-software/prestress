@@ -14,7 +14,7 @@ type Server struct {
 	serveMux      *http.ServeMux
 	listeners     []EventListener
 	middleware    []Middleware
-	migrations    []migrationTarget
+	migrations    []MigrationTarget
 }
 
 // Construct Server and read configuration from environment variables.

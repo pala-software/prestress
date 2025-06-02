@@ -13,12 +13,12 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
-type migrationTarget struct {
+type MigrationTarget struct {
 	Name      string
 	Directory fs.FS
 }
 
-func (target migrationTarget) Migrate(server Server, forceRunAll bool) error {
+func (target MigrationTarget) Migrate(server Server, forceRunAll bool) error {
 	var err error
 	ctx := context.Background()
 
@@ -101,7 +101,7 @@ func (target migrationTarget) Migrate(server Server, forceRunAll bool) error {
 func (server *Server) AddMigration(name string, directory fs.FS) {
 	server.migrations = append(
 		server.migrations,
-		migrationTarget{Name: name, Directory: directory},
+		MigrationTarget{Name: name, Directory: directory},
 	)
 }
 
@@ -113,7 +113,7 @@ func (server Server) Migrate() error {
 		return err
 	}
 
-	target := migrationTarget{
+	target := MigrationTarget{
 		Name:      "prestress",
 		Directory: dir,
 	}

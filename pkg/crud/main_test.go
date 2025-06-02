@@ -38,11 +38,17 @@ func TestMain(m *testing.M) {
 		log.Fatalln(err)
 	}
 
-	server.AddMigration("crud_test", migrations)
 	err = server.Migrate()
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	// Run test migrations forcefully
+	migration := prestress.MigrationTarget{
+		Name:      "crud_test",
+		Directory: migrations,
+	}
+	migration.Migrate(server, true)
 
 	code := m.Run()
 	os.Exit(code)
