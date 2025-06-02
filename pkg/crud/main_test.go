@@ -19,6 +19,10 @@ var migrations embed.FS
 var feature crud.Crud
 var server prestress.Server
 
+type Item struct {
+	Value string `json:"value"`
+}
+
 func TestMain(m *testing.M) {
 	var err error
 
@@ -76,17 +80,17 @@ func expectItems(
 			)
 		}
 
-		var actualValue string
-		err = result.Rows.Scan(&actualValue)
+		var actualItem Item
+		err = result.Rows.Scan(&actualItem)
 		if err != nil {
 			return err
 		}
 
-		if actualValue != expectedValue {
+		if actualItem.Value != expectedValue {
 			return fmt.Errorf(
 				"expected value '%s', got '%s'",
 				expectedValue,
-				actualValue,
+				actualItem.Value,
 			)
 		}
 

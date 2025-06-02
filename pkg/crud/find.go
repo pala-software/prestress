@@ -60,7 +60,7 @@ func (feature Crud) Find(
 	rows, err := tx.Query(
 		ctx,
 		fmt.Sprintf(
-			"SELECT * FROM %s AS t %s LIMIT %d OFFSET %d",
+			"SELECT to_json(t) FROM %s AS t %s LIMIT %d OFFSET %d",
 			pgx.Identifier{schema, table}.Sanitize(),
 			where.String("t", 1),
 			limit,
@@ -163,18 +163,13 @@ func (feature Crud) handleFind(
 	}
 
 	first := true
-	columns := result.Rows.FieldDescriptions()
-	row := make(map[string]any, len(columns))
+	row := json.RawMessage{}
 	defer result.Done()
 	for result.Rows.Next() {
-		values, err := result.Rows.Values()
+		err := result.Rows.Scan(&row)
 		if err != nil {
 			fmt.Println(err)
 			return
-		}
-
-		for index, column := range columns {
-			row[column.Name] = values[index]
 		}
 
 		encodedRow, err := json.Marshal(row)
