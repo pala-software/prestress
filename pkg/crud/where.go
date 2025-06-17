@@ -2,7 +2,9 @@ package crud
 
 import (
 	"fmt"
+	"maps"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -35,6 +37,12 @@ func ParseWhere(query url.Values) Where {
 	return where
 }
 
+func (where Where) Columns() []string {
+	columns := slices.Collect(maps.Keys(where))
+	slices.Sort(columns)
+	return columns
+}
+
 func (where Where) String(table string, paramStart int) string {
 	if len(where) == 0 {
 		return ""
@@ -42,7 +50,7 @@ func (where Where) String(table string, paramStart int) string {
 
 	conditions := make([]string, 0, len(where))
 	n := paramStart
-	for column := range where {
+	for _, column := range where.Columns() {
 		conditions = append(
 			conditions,
 			fmt.Sprintf(
@@ -58,7 +66,8 @@ func (where Where) String(table string, paramStart int) string {
 
 func (where Where) Values() []any {
 	values := make([]any, 0, len(where))
-	for _, value := range where {
+	for _, column := range where.Columns() {
+		value := where[column]
 		values = append(values, value)
 	}
 	return values

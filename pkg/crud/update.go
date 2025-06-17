@@ -58,8 +58,9 @@ func (feature Crud) Update(
 	}
 
 	patch := make([]string, 0, len(data))
+	values := make([]any, 0, len(patch)+len(where))
 	n := 1
-	for column := range data {
+	for column, value := range data {
 		patch = append(
 			patch,
 			fmt.Sprintf(
@@ -68,12 +69,8 @@ func (feature Crud) Update(
 				"$"+strconv.Itoa(n),
 			),
 		)
-		n++
-	}
-
-	values := make([]any, 0, len(patch)+len(where))
-	for _, value := range data {
 		values = append(values, value)
+		n++
 	}
 	values = append(values, where.Values()...)
 
