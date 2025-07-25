@@ -19,46 +19,52 @@ func CrudFromEnv() *Crud {
 	return &feature
 }
 
-func (feature Crud) Provider() any {
-	return feature.Register
-}
-
-func (feature *Crud) Register(
-	begin *prestress.BeginOperation,
-	core *prestress.Core,
-	mux *http.ServeMux,
-) (
-	self *Crud,
-	find *FindOperation,
-	create *CreateOperation,
-	update *UpdateOperation,
-	delete *DeleteOperation,
-	err error,
-) {
-	self = feature
-
-	find = NewFindOperation(begin)
-	create = NewCreateOperation(begin)
-	update = NewUpdateOperation(begin)
-	delete = NewDeleteOperation(begin)
-
-	core.Operations().Register(find)
-	core.Operations().Register(create)
-	core.Operations().Register(update)
-	core.Operations().Register(delete)
-
-	err = feature.RegisterRoutes(
-		mux,
-		find,
-		create,
-		update,
-		delete,
-	)
-	if err != nil {
+func (feature *Crud) Provider() any {
+	return func(
+		begin *prestress.BeginOperation,
+	) (
+		self *Crud,
+		find *FindOperation,
+		create *CreateOperation,
+		update *UpdateOperation,
+		delete *DeleteOperation,
+	) {
+		self = feature
+		find = NewFindOperation(begin)
+		create = NewCreateOperation(begin)
+		update = NewUpdateOperation(begin)
+		delete = NewDeleteOperation(begin)
 		return
 	}
+}
 
-	return
+func (feature *Crud) Invoker() any {
+	return func(
+		core *prestress.Core,
+		mux *http.ServeMux,
+		find *FindOperation,
+		create *CreateOperation,
+		update *UpdateOperation,
+		delete *DeleteOperation,
+	) (err error) {
+		core.Operations().Register(find)
+		core.Operations().Register(create)
+		core.Operations().Register(update)
+		core.Operations().Register(delete)
+
+		err = feature.RegisterRoutes(
+			mux,
+			find,
+			create,
+			update,
+			delete,
+		)
+		if err != nil {
+			return
+		}
+
+		return
+	}
 }
 
 func (feature Crud) RegisterRoutes(

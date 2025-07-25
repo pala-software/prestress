@@ -56,17 +56,17 @@ func newContainer() (c *dig.Container, err error) {
 		return
 	}
 
-	err = c.Provide(prestress.Core{}.Provider())
+	err = c.Provide((&prestress.Core{}).Provider())
 	if err != nil {
 		return
 	}
 
-	err = c.Provide(migrator.Migrator{}.Provider())
+	err = c.Provide((&migrator.Migrator{}).Provider())
 	if err != nil {
 		return
 	}
 
-	err = c.Provide(crud.Crud{}.Provider())
+	err = c.Provide((&crud.Crud{}).Provider())
 	if err != nil {
 		return
 	}

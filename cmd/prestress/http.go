@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -67,6 +68,8 @@ func startHttpServer(
 	go func() {
 		srvErr <- srv.Serve(listener)
 	}()
+
+	fmt.Println("Server started on port 8080!")
 
 	// Wait for interruption.
 	select {

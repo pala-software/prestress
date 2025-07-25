@@ -29,33 +29,41 @@ func SubscriberFromEnv() *Subscriber {
 }
 
 func (feature Subscriber) Provider() any {
-	return feature.Register
+	return func(
+		begin *prestress.BeginOperation,
+		create *crud.CreateOperation,
+		update *crud.UpdateOperation,
+		delete *crud.DeleteOperation,
+	) (
+		self *Subscriber,
+		subscribe *SubscribeOperation,
+	) {
+
+		return
+	}
 }
 
-func (feature *Subscriber) Register(
-	begin *prestress.BeginOperation,
-	create *crud.CreateOperation,
-	update *crud.UpdateOperation,
-	delete *crud.DeleteOperation,
-	core *prestress.Core,
-	mux *http.ServeMux,
-	mig *migrator.Migrator,
-) (self *Subscriber, subscribe *SubscribeOperation, err error) {
-	self = feature
-	subscribe = NewSubscribeOperation(begin, create, update, delete)
-	core.Operations().Register(subscribe)
+func (feature *Subscriber) Invoker() any {
+	return func(
+		subscribe *SubscribeOperation,
+		core *prestress.Core,
+		mux *http.ServeMux,
+		mig *migrator.Migrator,
+	) (err error) {
+		core.Operations().Register(subscribe)
 
-	err = feature.RegisterRoutes(mux, subscribe)
-	if err != nil {
+		err = feature.RegisterRoutes(mux, subscribe)
+		if err != nil {
+			return
+		}
+
+		err = feature.RegisterMigrations(mig)
+		if err != nil {
+			return
+		}
+
 		return
 	}
-
-	err = feature.RegisterMigrations(mig)
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 func (feature Subscriber) RegisterRoutes(

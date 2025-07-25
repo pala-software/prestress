@@ -24,6 +24,24 @@ func (mig Migrator) Migrate(conn *pgx.Conn) (err error) {
 	return
 }
 
+func (mig *Migrator) Provider() any {
+	return func() (self *Migrator) {
+		self = mig
+		return
+	}
+}
+
+func (mig *Migrator) Invoker() any {
+	return func() (err error) {
+		err = mig.RegisterMigrations(mig)
+		if err != nil {
+			return
+		}
+
+		return
+	}
+}
+
 func (Migrator) RegisterMigrations(mig *Migrator) (err error) {
 	err = RegisterPrestressMigrations(mig)
 	if err != nil {
@@ -31,21 +49,6 @@ func (Migrator) RegisterMigrations(mig *Migrator) (err error) {
 	}
 
 	err = RegisterMigrationsFromEnv(mig)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func (feature Migrator) Provider() any {
-	return feature.Register
-}
-
-func (mig *Migrator) Register() (self *Migrator, err error) {
-	self = mig
-
-	err = mig.RegisterMigrations(mig)
 	if err != nil {
 		return
 	}

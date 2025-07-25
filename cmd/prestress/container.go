@@ -7,10 +7,21 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/migrator"
 	"gitlab.com/pala-software/prestress/pkg/oauth"
+	"gitlab.com/pala-software/prestress/pkg/otel"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 	"gitlab.com/pala-software/prestress/pkg/subscriber"
 	"go.uber.org/dig"
 )
+
+var features = []prestress.Feature{
+	prestress.CoreFromEnv(),
+	migrator.MigratorFromEnv(),
+	crud.CrudFromEnv(),
+	subscriber.SubscriberFromEnv(),
+	auth.AuthenticationFromEnv(),
+	oauth.OAuthFromEnv(),
+	otel.OTelFromEnv(),
+}
 
 func container() (c *dig.Container, err error) {
 	c = dig.New()
@@ -25,34 +36,23 @@ func container() (c *dig.Container, err error) {
 		return
 	}
 
-	err = c.Provide(prestress.CoreFromEnv().Provider())
-	if err != nil {
-		return
+	for _, feature := range features {
+		err = c.Provide(feature.Provider())
+		if err != nil {
+			return
+		}
 	}
 
-	err = c.Provide(migrator.MigratorFromEnv().Provider())
-	if err != nil {
-		return
-	}
+	// Assign authenticator to use (provide the interface).
+	c.Provide(func(authenticator *oauth.OAuth) auth.Authenticator {
+		return authenticator
+	})
 
-	err = c.Provide(crud.CrudFromEnv().Provider())
-	if err != nil {
-		return
-	}
-
-	err = c.Provide(subscriber.SubscriberFromEnv().Provider())
-	if err != nil {
-		return
-	}
-
-	err = c.Provide(auth.AuthenticationFromEnv().Provider())
-	if err != nil {
-		return
-	}
-
-	err = c.Provide(oauth.OAuthFromEnv().Provider())
-	if err != nil {
-		return
+	for _, feature := range features {
+		err = c.Invoke(feature.Invoker())
+		if err != nil {
+			return
+		}
 	}
 
 	return

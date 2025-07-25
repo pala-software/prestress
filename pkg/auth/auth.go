@@ -24,28 +24,32 @@ func AuthenticationFromEnv() *Authentication {
 	return feature
 }
 
-func (feature Authentication) Provider() any {
-	return feature.Register
+func (feature *Authentication) Provider() any {
+	return func() (self *Authentication) {
+		self = feature
+		return
+	}
 }
 
-func (feature *Authentication) Register(
-	mig *migrator.Migrator,
-	authenticator Authenticator,
-	begin prestress.BeginOperation,
-) (self *Authentication, err error) {
-	self = feature
+func (feature *Authentication) Invoker() any {
+	return func(
+		mig *migrator.Migrator,
+		authenticator Authenticator,
+		begin *prestress.BeginOperation,
+	) (err error) {
 
-	err = feature.RegisterMigrations(mig)
-	if err != nil {
+		err = feature.RegisterMigrations(mig)
+		if err != nil {
+			return
+		}
+
+		err = feature.RegisterHooks(authenticator, begin)
+		if err != nil {
+			return
+		}
+
 		return
 	}
-
-	err = feature.RegisterHooks(authenticator, begin)
-	if err != nil {
-		return
-	}
-
-	return
 }
 
 func (Authentication) RegisterMigrations(mig *migrator.Migrator) (err error) {
@@ -63,7 +67,7 @@ func (Authentication) RegisterMigrations(mig *migrator.Migrator) (err error) {
 
 func (Authentication) RegisterHooks(
 	authenticator Authenticator,
-	begin prestress.BeginOperation,
+	begin *prestress.BeginOperation,
 ) (err error) {
 	begin.Before().Register(func(
 		initCtx prestress.OperationContext,

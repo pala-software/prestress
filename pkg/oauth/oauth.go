@@ -46,10 +46,15 @@ func OAuthFromEnv() *OAuth {
 	return &feature
 }
 
-func (feature OAuth) Provider() any {
-	return feature.Register
+func (feature *OAuth) Provider() any {
+	return func() (self *OAuth) {
+		self = feature
+		return
+	}
 }
 
-func (feature *OAuth) Register() *OAuth {
-	return feature
+func (feature *OAuth) Invoker() any {
+	return func() error {
+		return nil
+	}
 }

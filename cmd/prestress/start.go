@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 func start() (err error) {
 	c, err := container()
 	if err != nil {
@@ -15,6 +11,5 @@ func start() (err error) {
 		return
 	}
 
-	fmt.Println("Server started!")
 	return
 }

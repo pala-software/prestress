@@ -98,18 +98,23 @@ func (feature OTel) RegisterHooks(
 	return
 }
 
-func (feature OTel) Provider() any {
-	return feature.Register
-}
-
-func (feature OTel) Register(
-	lifecycle *prestress.Lifecycle,
-	core *prestress.Core,
-) (err error) {
-	err = feature.RegisterHooks(lifecycle, core)
-	if err != nil {
+func (feature *OTel) Provider() any {
+	return func() (self *OTel) {
+		self = feature
 		return
 	}
+}
 
-	return
+func (feature *OTel) Invoker() any {
+	return func(
+		lifecycle *prestress.Lifecycle,
+		core *prestress.Core,
+	) (err error) {
+		err = feature.RegisterHooks(lifecycle, core)
+		if err != nil {
+			return
+		}
+
+		return
+	}
 }
