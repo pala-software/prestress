@@ -11,6 +11,22 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
+type corsHandler struct {
+	AllowedOrigins string
+	Next           http.Handler
+}
+
+func (handler corsHandler) ServeHTTP(
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	if handler.AllowedOrigins != "" {
+		writer.Header().Set("Access-Control-Allow-Origin", handler.AllowedOrigins)
+	}
+
+	handler.Next.ServeHTTP(writer, request)
+}
+
 func startHttpServer(
 	mux *http.ServeMux,
 	lifecycle *prestress.Lifecycle,
@@ -42,7 +58,10 @@ func startHttpServer(
 
 	// Serve HTTP
 	srv := &http.Server{
-		Handler: mux,
+		Handler: corsHandler{
+			AllowedOrigins: os.Getenv("PRESTRESS_ALLOWED_ORIGINS"),
+			Next:           mux,
+		},
 	}
 	srvErr := make(chan error, 1)
 	go func() {
