@@ -1,4 +1,4 @@
-package prestress
+package main
 
 import (
 	"context"
@@ -7,28 +7,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+
+	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-type Middleware func(http.Handler) http.Handler
-
-func (server *Server) HTTP() *http.ServeMux {
-	if server.serveMux == nil {
-		server.serveMux = http.NewServeMux()
-	}
-	return server.serveMux
-}
-
-func (server *Server) AddMiddleware(middleware Middleware) {
-	server.middleware = append(server.middleware, middleware)
-}
-
-func (server *Server) StartHttpServer() (err error) {
-	// Apply middleware
-	handler := http.Handler(server.HTTP())
-	for _, middleware := range server.middleware {
-		handler = middleware(handler)
-	}
-
+func startHttpServer(
+	mux *http.ServeMux,
+	lifecycle *prestress.Lifecycle,
+) (err error) {
 	// Start listening
 	// TODO: Allow configuring port
 	listener, err := net.Listen("tcp", ":8080")
@@ -40,19 +26,23 @@ func (server *Server) StartHttpServer() (err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	defer func() {
-		eventErr := server.Emit(ServerShutdownEvent{Context: context.Background()})
-		err = errors.Join(err, eventErr)
+		for _, hook := range lifecycle.Shutdown.Value() {
+			hookErr := hook()
+			err = errors.Join(err, hookErr)
+		}
 	}()
 
 	// Emit start event
-	err = server.Emit(ServerStartEvent{Context: ctx})
-	if err != nil {
-		return
+	for _, hook := range lifecycle.Start.Value() {
+		err = hook()
+		if err != nil {
+			return
+		}
 	}
 
 	// Serve HTTP
 	srv := &http.Server{
-		Handler: handler,
+		Handler: mux,
 	}
 	srvErr := make(chan error, 1)
 	go func() {

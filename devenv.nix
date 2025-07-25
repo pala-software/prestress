@@ -31,8 +31,8 @@
   };
   processes.prestress = {
     exec = ''
-      go run cmd/prestress/prestress.go migrate && \
-      wgo run cmd/prestress/prestress.go start
+      go run ./cmd/prestress migrate && \
+      wgo run ./cmd/prestress start
     '';
     process-compose.depends_on.postgres.condition = "process_healthy";
   };

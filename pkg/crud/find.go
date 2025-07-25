@@ -1,7 +1,6 @@
 package crud
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,115 +10,62 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-const FindOperation = "Find"
-
-type FindResult struct {
-	Rows pgx.Rows
-	Done func()
+type FindParams struct {
+	Table  string
+	Where  Where
+	Limit  int
+	Offset int
 }
 
-func (feature Crud) Find(
-	ctx context.Context,
-	auth prestress.AuthenticationResult,
-	schema string,
-	table string,
-	where Where,
-	limit int,
-	offset int,
-) (*FindResult, error) {
-	var err error
-
-	err = feature.server.Emit(BeforeBeginOperationEvent{
-		OperationName: FindOperation,
-		Auth:          &auth,
-		Schema:        &schema,
-		Table:         &table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return nil, err
+func (params FindParams) Details() map[string]string {
+	return map[string]string{
+		"table":  params.Table,
+		"limit":  strconv.Itoa(params.Limit),
+		"offset": strconv.Itoa(params.Offset),
 	}
+}
 
-	tx, err := feature.server.Begin(ctx, auth, schema)
-	if err != nil {
-		return nil, err
-	}
+type FindResult struct {
+	pgx.Rows
+}
 
-	err = feature.server.Emit(AfterBeginOperationEvent{
-		OperationName: FindOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		return nil, err
-	}
+func (FindResult) Details() map[string]string {
+	// TODO: Implement
+	return map[string]string{}
+}
 
-	rows, err := tx.Query(
+type FindOperationHandler struct{}
+
+func (FindOperationHandler) Name() string {
+	return "Find"
+}
+
+func (op FindOperationHandler) Execute(
+	ctx prestress.OperationContext,
+	params FindParams,
+) (res FindResult, err error) {
+	rows, err := ctx.Tx.Query(
 		ctx,
 		fmt.Sprintf(
 			"SELECT to_json(t) FROM %s AS t %s LIMIT %d OFFSET %d",
-			pgx.Identifier{schema, table}.Sanitize(),
-			where.String("t", 1),
-			limit,
-			offset,
+			pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
+			params.Where.String("t", 1),
+			params.Limit,
+			params.Offset,
 		),
-		where.Values()...,
+		params.Where.Values()...,
 	)
-	if err != nil {
-		tx.Rollback(ctx)
-		return nil, err
-	}
-
-	return &FindResult{
-		Rows: rows,
-		Done: func() {
-			rows.Close()
-
-			err = feature.server.Emit(BeforeCommitOperationEvent{
-				OperationName: FindOperation,
-				Auth:          auth,
-				Schema:        schema,
-				Table:         table,
-				Transaction:   tx,
-				Context:       ctx,
-			})
-			if err != nil {
-				fmt.Println(err)
-				tx.Rollback(ctx)
-				return
-			}
-
-			err := tx.Commit(ctx)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			err = feature.server.Emit(AfterCommitOperationEvent{
-				OperationName: FindOperation,
-				Auth:          auth,
-				Schema:        schema,
-				Table:         table,
-				Context:       ctx,
-			})
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-		},
-	}, nil
+	res = FindResult{rows}
+	return
 }
 
-func (feature Crud) handleFind(
+func (op FindOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
+	handle func(FindParams) (FindResult, error),
 ) {
 	var err error
 
-	schema := request.PathValue("schema")
 	table := request.PathValue("table")
 	query := request.URL.Query()
 
@@ -143,30 +89,23 @@ func (feature Crud) handleFind(
 		}
 	}
 
-	auth := feature.server.Authenticate(writer, request)
-	if auth == nil {
-		return
+	params := FindParams{
+		Table:  table,
+		Where:  where,
+		Limit:  limit,
+		Offset: offset,
 	}
-
-	result, err := feature.Find(
-		request.Context(),
-		*auth,
-		schema,
-		table,
-		where,
-		limit,
-		offset,
-	)
+	rows, err := handle(params)
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
 	}
+	defer rows.Close()
 
 	first := true
 	row := json.RawMessage{}
-	defer result.Done()
-	for result.Rows.Next() {
-		err := result.Rows.Scan(&row)
+	for rows.Next() {
+		err := rows.Scan(&row)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -195,7 +134,7 @@ func (feature Crud) handleFind(
 		}
 	}
 
-	err = result.Rows.Err()
+	err = rows.Err()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
@@ -204,5 +143,18 @@ func (feature Crud) handleFind(
 	if first {
 		writer.WriteHeader(200)
 		writer.Write([]byte("[]"))
+	}
+}
+
+type FindOperation struct {
+	*prestress.Operation[FindParams, FindResult]
+}
+
+func NewFindOperation(begin *prestress.BeginOperation) *FindOperation {
+	return &FindOperation{
+		prestress.NewOperation(
+			new(FindOperationHandler),
+			begin,
+		),
 	}
 }

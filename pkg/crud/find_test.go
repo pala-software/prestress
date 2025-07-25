@@ -2,22 +2,36 @@ package crud_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"gitlab.com/pala-software/prestress/pkg/crud"
 )
 
 func TestFindWithCancelledContext(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+	err := func() (err error) {
+		initCtx, cancel := context.WithCancel(context.Background())
+		ctx, err := begin(initCtx)
+		if err != nil {
+			cancel()
+			return
+		}
 
-	err := expectItems(
-		ctx,
-		"find",
-		crud.Where{},
-		[]string{},
-	)
-	if err != context.Canceled {
+		cancel()
+		err = expectItems(
+			ctx,
+			"find",
+			crud.Where{},
+			[]string{},
+		)
+		if err != nil {
+			return
+		}
+
+		return
+	}()
+
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf(
 			"expected error to be '%v', got '%v'",
 			context.Canceled,
@@ -27,24 +41,50 @@ func TestFindWithCancelledContext(t *testing.T) {
 }
 
 func TestFindAll(t *testing.T) {
-	err := expectItems(
-		context.Background(),
-		"find",
-		crud.Where{},
-		[]string{"1", "2"},
-	)
+	err := func() (err error) {
+		ctx, err := begin(context.Background())
+		if err != nil {
+			return
+		}
+
+		err = expectItems(
+			ctx,
+			"find",
+			crud.Where{},
+			[]string{"1", "2"},
+		)
+		if err != nil {
+			return
+		}
+
+		return
+	}()
+
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestFindWithFilter(t *testing.T) {
-	err := expectItems(
-		context.Background(),
-		"find",
-		crud.Where{"value": "1"},
-		[]string{"1"},
-	)
+	err := func() (err error) {
+		ctx, err := begin(context.Background())
+		if err != nil {
+			return
+		}
+
+		err = expectItems(
+			ctx,
+			"find",
+			crud.Where{"value": "1"},
+			[]string{"1"},
+		)
+		if err != nil {
+			return
+		}
+
+		return
+	}()
+
 	if err != nil {
 		t.Error(err)
 	}

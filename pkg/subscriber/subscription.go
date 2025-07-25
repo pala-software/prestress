@@ -1,4 +1,4 @@
-package subscribe
+package subscriber
 
 import "encoding/json"
 
@@ -10,4 +10,9 @@ type Change struct {
 
 type Subscription struct {
 	Change chan Change
+}
+
+func (Subscription) Details() map[string]string {
+	// TODO: Implement
+	return map[string]string{}
 }
