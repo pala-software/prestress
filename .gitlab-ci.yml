@@ -19,7 +19,6 @@ test:
     POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
     PRESTRESS_TEST_DB: postgres://postgres:postgres@postgres/postgres
-    CI_DEBUG_SERVICES: "true"
   coverage: '/total:\s+\(statements\)\s+\d+.\d+%/'
   artifacts:
     reports:

@@ -12,7 +12,6 @@ import (
 )
 
 var name = "gitlab.com/pala-software/prestress/pkg/otel"
-var logger = otelslog.NewLogger(name)
 
 type OTel struct {
 	TracesEnabled  bool
@@ -21,11 +20,11 @@ type OTel struct {
 }
 
 func OTelFromEnv() *OTel {
-	feature := OTel{}
+	feature := &OTel{}
 	feature.TracesEnabled = os.Getenv("PRESTRESS_OTEL_TRACES_ENABLE") == "1"
 	feature.MetricsEnabled = os.Getenv("PRESTRESS_OTEL_METRICS_ENABLE") == "1"
 	feature.LogsEnabled = os.Getenv("PRESTRESS_OTEL_METRICS_ENABLE") == "1"
-	return &feature
+	return feature
 }
 
 func (feature OTel) Middleware() func(http.Handler) http.Handler {
@@ -57,6 +56,8 @@ func (feature OTel) RegisterHooks(
 	lifecycle *prestress.Lifecycle,
 	core *prestress.Core,
 ) (err error) {
+	logger := otelslog.NewLogger(name)
+
 	otelShutdown, err := feature.setup(context.Background())
 	if err != nil {
 		return
