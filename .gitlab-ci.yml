@@ -7,8 +7,8 @@ test:
   services:
     - postgres:16.5
   script:
-    - apk add postgresql16-client
-    - psql $PRESTRESS_TEST_DB < seed.sql
+    - apk add postgresql17-client
+    - psql $PRESTRESS_TEST_DB < init.sql
     - go get github.com/boumenot/gocover-cobertura
     - go test ./pkg/... -coverprofile=coverage.txt -covermode count
     - go tool cover -func coverage.txt

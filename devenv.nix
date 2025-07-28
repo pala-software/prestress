@@ -24,12 +24,7 @@
   languages.go.enable = true;
   services.postgres = {
     enable = true;
-    initialScript = ''
-      CREATE ROLE anonymous;
-      CREATE ROLE authenticated;
-
-      GRANT anonymous TO authenticated WITH INHERIT TRUE;
-    '';
+    initialScript = builtins.readFile ./init.sql;
     initialDatabases = [
       { name = "prestress_dev"; }
       { name = "prestress_test"; }
