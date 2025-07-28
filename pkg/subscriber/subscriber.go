@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/migrator"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
@@ -28,8 +29,9 @@ func SubscriberFromEnv() *Subscriber {
 	return feature
 }
 
-func (feature Subscriber) Provider() any {
+func (feature *Subscriber) Provider() any {
 	return func(
+		pool *pgxpool.Pool,
 		begin *prestress.BeginOperation,
 		create *crud.CreateOperation,
 		update *crud.UpdateOperation,
@@ -38,7 +40,13 @@ func (feature Subscriber) Provider() any {
 		self *Subscriber,
 		subscribe *SubscribeOperation,
 	) {
-
+		self = feature
+		subscribe = NewSubscribeOperation(pool,
+			begin,
+			create,
+			update,
+			delete,
+		)
 		return
 	}
 }

@@ -114,7 +114,6 @@ func (Authentication) RegisterHooks(
 			),
 		)
 		if err != nil {
-			ctx.Tx.Rollback(ctx)
 			return
 		}
 

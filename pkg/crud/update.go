@@ -71,7 +71,11 @@ func (op UpdateOperationHandler) Execute(
 func (op UpdateOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
-	handle func(UpdateParams) (prestress.EmptyOperationResult, error),
+	handle func(UpdateParams) (
+		prestress.EmptyOperationResult,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
@@ -104,7 +108,13 @@ func (op UpdateOperationHandler) Handle(
 		Where: where,
 		Data:  data,
 	}
-	_, err = handle(params)
+	_, ctx, err := handle(params)
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
+		return
+	}
+
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return

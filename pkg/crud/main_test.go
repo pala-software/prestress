@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/migrator"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
@@ -21,6 +22,12 @@ import (
 var migrations embed.FS
 
 var container *dig.Container
+
+var features = []prestress.Feature{
+	prestress.CoreFromEnv(),
+	migrator.MigratorFromEnv(),
+	crud.CrudFromEnv(),
+}
 
 type Item struct {
 	Value string `json:"value"`
@@ -56,32 +63,31 @@ func newContainer() (c *dig.Container, err error) {
 		return
 	}
 
-	err = c.Provide((&prestress.Core{}).Provider())
-	if err != nil {
-		return
+	for _, feature := range features {
+		err = c.Provide(feature.Provider())
+		if err != nil {
+			return
+		}
 	}
 
-	err = c.Provide((&migrator.Migrator{}).Provider())
-	if err != nil {
-		return
-	}
-
-	err = c.Provide((&crud.Crud{}).Provider())
-	if err != nil {
-		return
+	for _, feature := range features {
+		err = c.Invoke(feature.Invoker())
+		if err != nil {
+			return
+		}
 	}
 
 	return
 }
 
-func databaseFromEnv() (conn *pgx.Conn, err error) {
+func databaseFromEnv() (pool *pgxpool.Pool, err error) {
 	connStr := os.Getenv("PRESTRESS_TEST_DB")
-	conn, err = pgx.Connect(context.Background(), connStr)
+	pool, err = pgxpool.New(context.Background(), connStr)
 	return
 }
 
-func runTestMigrations(mig *migrator.Migrator, conn *pgx.Conn) (err error) {
-	err = mig.Migrate(conn)
+func runTestMigrations(mig *migrator.Migrator, pool *pgxpool.Pool) (err error) {
+	err = mig.Migrate(pool)
 	if err != nil {
 		return
 	}
@@ -90,6 +96,13 @@ func runTestMigrations(mig *migrator.Migrator, conn *pgx.Conn) (err error) {
 		Name:      "crud_test",
 		Directory: migrations,
 	}
+
+	conn, err := pool.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+
+	defer conn.Release()
 
 	// Run test migrations forcefully
 	err = migration.Migrate(conn, true)

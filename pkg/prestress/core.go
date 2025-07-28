@@ -1,6 +1,8 @@
 package prestress
 
-import "github.com/jackc/pgx/v5"
+import (
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 type Core struct {
 	// All operations should be registered to here.
@@ -19,7 +21,7 @@ func CoreFromEnv() *Core {
 
 func (feature *Core) Provider() any {
 	return func(
-		conn *pgx.Conn,
+		pool *pgxpool.Pool,
 	) (
 		self *Core,
 		lifecycle *Lifecycle,
@@ -27,7 +29,7 @@ func (feature *Core) Provider() any {
 	) {
 		self = feature
 		lifecycle = NewLifecycle()
-		begin = NewBeginOperation(conn)
+		begin = NewBeginOperation(pool)
 
 		feature.Operations().Register(begin)
 		return

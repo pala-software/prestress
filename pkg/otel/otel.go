@@ -32,6 +32,27 @@ func (feature OTel) Middleware() func(http.Handler) http.Handler {
 	return otelhttp.NewMiddleware("server")
 }
 
+func (feature *OTel) Provider() any {
+	return func() (self *OTel) {
+		self = feature
+		return
+	}
+}
+
+func (feature *OTel) Invoker() any {
+	return func(
+		lifecycle *prestress.Lifecycle,
+		core *prestress.Core,
+	) (err error) {
+		err = feature.RegisterHooks(lifecycle, core)
+		if err != nil {
+			return
+		}
+
+		return
+	}
+}
+
 func (feature OTel) RegisterHooks(
 	lifecycle *prestress.Lifecycle,
 	core *prestress.Core,
@@ -96,25 +117,4 @@ func (feature OTel) RegisterHooks(
 	}
 
 	return
-}
-
-func (feature *OTel) Provider() any {
-	return func() (self *OTel) {
-		self = feature
-		return
-	}
-}
-
-func (feature *OTel) Invoker() any {
-	return func(
-		lifecycle *prestress.Lifecycle,
-		core *prestress.Core,
-	) (err error) {
-		err = feature.RegisterHooks(lifecycle, core)
-		if err != nil {
-			return
-		}
-
-		return
-	}
 }

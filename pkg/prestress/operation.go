@@ -78,7 +78,7 @@ type OperationHandler[Params OperationParams, Res OperationResult] interface {
 		*http.Request,
 
 		// Function to use instead of calling OperationHandler.handle directly
-		func(Params) (Res, error),
+		func(Params) (Res, OperationContext, error),
 	)
 }
 
@@ -123,22 +123,22 @@ func (op Operation[Params, Res]) Name() string {
 	return op.handler.Name()
 }
 
-func (op Operation[Params, Res]) Before() *Registry[BeforeOperationHook[Params, Res]] {
+func (op *Operation[Params, Res]) Before() *Registry[BeforeOperationHook[Params, Res]] {
 	return &op.before
 }
 
-func (op Operation[Params, Res]) After() *Registry[AfterOperationHook[Params, Res]] {
+func (op *Operation[Params, Res]) After() *Registry[AfterOperationHook[Params, Res]] {
 	return &op.after
 }
 
-func (op Operation[Params, Res]) OnBefore(handler BeforeEventHandler) {
+func (op *Operation[Params, Res]) OnBefore(handler BeforeEventHandler) {
 	op.before.Register(func(ctx OperationContext, params Params) (OperationContext, Params, error) {
 		err := handler(ctx, params)
 		return ctx, params, err
 	})
 }
 
-func (op Operation[Params, Res]) OnAfter(handler AfterEventHandler) {
+func (op *Operation[Params, Res]) OnAfter(handler AfterEventHandler) {
 	op.after.Register(func(ctx OperationContext, params Params, res Res) (Res, error) {
 		err := handler(ctx, params, res)
 		return res, err
@@ -184,15 +184,14 @@ func (op Operation[Params, Res]) ServeHTTP(
 	op.handler.Handle(
 		writer,
 		request,
-		func(params Params) (res Res, err error) {
+		func(params Params) (res Res, ctx OperationContext, err error) {
 			if op.begin == nil {
 				err = ErrNoBegin
 				return
 			}
 
-			ctx, err := op.begin.BeginHTTP(request)
+			ctx, err = op.begin.BeginHTTP(request)
 			if err != nil {
-				ctx.Rollback()
 				return
 			}
 
@@ -202,7 +201,6 @@ func (op Operation[Params, Res]) ServeHTTP(
 				return
 			}
 
-			err = ctx.Commit()
 			return
 		},
 	)

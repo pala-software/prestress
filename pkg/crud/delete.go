@@ -44,7 +44,11 @@ func (op DeleteOperationHandler) Execute(
 func (op DeleteOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
-	handle func(DeleteParams) (prestress.EmptyOperationResult, error),
+	handle func(DeleteParams) (
+		prestress.EmptyOperationResult,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
@@ -56,7 +60,13 @@ func (op DeleteOperationHandler) Handle(
 		Table: table,
 		Where: where,
 	}
-	_, err = handle(params)
+	_, ctx, err := handle(params)
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
+		return
+	}
+
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return

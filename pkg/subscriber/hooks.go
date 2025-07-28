@@ -8,10 +8,7 @@ import (
 
 func (SubscribeOperationHandler) createChangeTable(
 	ctx prestress.OperationContext,
-	params prestress.EmptyOperationParams,
-	initRes prestress.OperationContext,
-) (res prestress.OperationContext, err error) {
-	res = initRes
+) (err error) {
 	_, err = ctx.Tx.Exec(
 		ctx,
 		`CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_change

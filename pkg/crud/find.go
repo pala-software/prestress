@@ -62,7 +62,11 @@ func (op FindOperationHandler) Execute(
 func (op FindOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
-	handle func(FindParams) (FindResult, error),
+	handle func(FindParams) (
+		FindResult,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
@@ -95,7 +99,7 @@ func (op FindOperationHandler) Handle(
 		Limit:  limit,
 		Offset: offset,
 	}
-	rows, err := handle(params)
+	rows, ctx, err := handle(params)
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
@@ -135,6 +139,12 @@ func (op FindOperationHandler) Handle(
 	}
 
 	err = rows.Err()
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
+		return
+	}
+
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return

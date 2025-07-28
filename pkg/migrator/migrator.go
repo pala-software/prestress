@@ -1,7 +1,9 @@
 package migrator
 
 import (
-	"github.com/jackc/pgx/v5"
+	"context"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -13,7 +15,14 @@ func MigratorFromEnv() *Migrator {
 	return &Migrator{}
 }
 
-func (mig Migrator) Migrate(conn *pgx.Conn) (err error) {
+func (mig Migrator) Migrate(pool *pgxpool.Pool) (err error) {
+	conn, err := pool.Acquire(context.Background())
+	if err != nil {
+		return
+	}
+
+	defer conn.Release()
+
 	for _, target := range mig.Targets.Value() {
 		err = target.Migrate(conn, false)
 		if err != nil {

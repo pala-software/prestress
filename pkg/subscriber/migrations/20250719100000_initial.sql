@@ -315,10 +315,8 @@ AS $$
 $$;
 
 CREATE FUNCTION prestress.setup_subscription(
-  role_name NAME,
   table_schema NAME,
-  table_name NAME,
-  authorization_variables jsonb)
+  table_name NAME)
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
@@ -329,8 +327,6 @@ AS $$
     target_table NAME;
     trigger_id BIGINT := 1;
   BEGIN
-    EXECUTE format('SET LOCAL ROLE TO %I', role_name);
-
     EXECUTE format(
       'CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
@@ -338,14 +334,11 @@ AS $$
       SECURITY DEFINER
       AS $s$
         BEGIN
-          PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_state(%L, %L, %L);
-          PERFORM prestress.end_authorized();
           RETURN NULL;
         END;
       $s$;',
       'prestress_before_' || subscription_id,
-      authorization_variables,
       subscription_id,
       table_schema,
       table_name
@@ -358,30 +351,25 @@ AS $$
       SECURITY DEFINER
       AS $s$
         BEGIN
-          PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_change(%L, %L, %L);
           PERFORM prestress.drop_state(%L);
-          PERFORM prestress.end_authorized();
           RETURN NULL;
         END;
       $s$;',
       'prestress_after_' || subscription_id,
-      authorization_variables,
       subscription_id,
       table_schema,
       table_name,
       subscription_id
     );
 
-    EXECUTE format('SET LOCAL ROLE TO %I', original_role);
+    RESET ROLE;
 
     FOR target_schema, target_table IN
       SELECT related_table.table_schema, related_table.table_name
       FROM prestress.get_related_tables(table_schema, table_name)
       AS related_table
     LOOP
-      RAISE NOTICE '%s.%s', target_schema, target_table;
-
       EXECUTE format(
         'CREATE TRIGGER %I
         BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
@@ -406,6 +394,8 @@ AS $$
 
       SELECT trigger_id + 1 INTO trigger_id;
     END LOOP;
+
+    EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
     RETURN subscription_id;
   END;

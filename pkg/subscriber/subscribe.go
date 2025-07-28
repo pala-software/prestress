@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"gitlab.com/pala-software/prestress/pkg/auth"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
@@ -22,6 +22,7 @@ func (params SubscribeParams) Details() map[string]string {
 }
 
 type SubscribeOperationHandler struct {
+	pool          *pgxpool.Pool
 	subscriptions map[int]*Subscription
 }
 
@@ -33,30 +34,12 @@ func (op SubscribeOperationHandler) Execute(
 	ctx prestress.OperationContext,
 	params SubscribeParams,
 ) (sub *Subscription, err error) {
-	authRes, ok := ctx.Variables["auth"].(*auth.AuthenticationResult)
-	if !ok {
-		err = auth.ErrAuthenticationRequired
-		return
-	}
-
-	variables := map[string]any{}
-	if authRes.Variables != nil {
-		variables = authRes.Variables
-	}
-
-	encodedVariables, err := json.Marshal(variables)
-	if err != nil {
-		return
-	}
-
 	var subId int
 	err = ctx.Tx.QueryRow(
 		ctx,
-		"SELECT prestress.setup_subscription($1, $2, $3, $4)",
-		authRes.Role,
+		"SELECT prestress.setup_subscription($1, $2)",
 		ctx.Schema,
 		params.Table,
-		encodedVariables,
 	).Scan(&subId)
 	if err != nil {
 		return
@@ -68,8 +51,8 @@ func (op SubscribeOperationHandler) Execute(
 	op.subscriptions[subId] = sub
 
 	context.AfterFunc(ctx, func() {
-		_, err := ctx.Tx.Exec(
-			ctx,
+		_, err := op.pool.Exec(
+			context.Background(),
 			"SELECT prestress.teardown_subscription($1)",
 			subId,
 		)
@@ -85,7 +68,11 @@ func (op SubscribeOperationHandler) Execute(
 func (op SubscribeOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
-	handle func(SubscribeParams) (*Subscription, error),
+	handle func(SubscribeParams) (
+		*Subscription,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
@@ -93,7 +80,13 @@ func (op SubscribeOperationHandler) Handle(
 	params := SubscribeParams{
 		Table: table,
 	}
-	sub, err := handle(params)
+	sub, ctx, err := handle(params)
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
+		return
+	}
+
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
@@ -145,14 +138,31 @@ type SubscribeOperation struct {
 }
 
 func NewSubscribeOperation(
+	pool *pgxpool.Pool,
 	begin *prestress.BeginOperation,
 	create *crud.CreateOperation,
 	update *crud.UpdateOperation,
 	delete *crud.DeleteOperation,
 ) *SubscribeOperation {
-	handler := new(SubscribeOperationHandler)
+	handler := &SubscribeOperationHandler{
+		pool:          pool,
+		subscriptions: make(map[int]*Subscription),
+	}
 
-	begin.After().Register(handler.createChangeTable)
+	create.Before().Register(func(
+		initCtx prestress.OperationContext,
+		initParams crud.CreateParams,
+	) (
+		ctx prestress.OperationContext,
+		params crud.CreateParams,
+		err error,
+	) {
+		ctx = initCtx
+		params = initParams
+		err = handler.createChangeTable(ctx)
+		return
+	})
+
 	create.After().Register(func(
 		ctx prestress.OperationContext,
 		params crud.CreateParams,
@@ -162,6 +172,21 @@ func NewSubscribeOperation(
 		err = handler.collectChanges(ctx)
 		return
 	})
+
+	update.Before().Register(func(
+		initCtx prestress.OperationContext,
+		initParams crud.UpdateParams,
+	) (
+		ctx prestress.OperationContext,
+		params crud.UpdateParams,
+		err error,
+	) {
+		ctx = initCtx
+		params = initParams
+		err = handler.createChangeTable(ctx)
+		return
+	})
+
 	update.After().Register(func(
 		ctx prestress.OperationContext,
 		params crud.UpdateParams,
@@ -171,6 +196,21 @@ func NewSubscribeOperation(
 		err = handler.collectChanges(ctx)
 		return
 	})
+
+	delete.Before().Register(func(
+		initCtx prestress.OperationContext,
+		initParams crud.DeleteParams,
+	) (
+		ctx prestress.OperationContext,
+		params crud.DeleteParams,
+		err error,
+	) {
+		ctx = initCtx
+		params = initParams
+		err = handler.createChangeTable(ctx)
+		return
+	})
+
 	delete.After().Register(func(
 		ctx prestress.OperationContext,
 		params crud.DeleteParams,

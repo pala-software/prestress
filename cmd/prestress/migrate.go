@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/migrator"
 )
 
@@ -13,8 +13,8 @@ func migrate() (err error) {
 		return
 	}
 
-	err = c.Invoke(func(mig *migrator.Migrator, conn *pgx.Conn) error {
-		return mig.Migrate(conn)
+	err = c.Invoke(func(mig *migrator.Migrator, pool *pgxpool.Pool) error {
+		return mig.Migrate(pool)
 	})
 	if err != nil {
 		return

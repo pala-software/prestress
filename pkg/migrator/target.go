@@ -7,6 +7,7 @@ import (
 	"io/fs"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type MigrationTarget struct {
@@ -15,14 +16,14 @@ type MigrationTarget struct {
 }
 
 func (target MigrationTarget) Migrate(
-	db *pgx.Conn,
+	conn *pgxpool.Conn,
 	forceRunAll bool,
 ) error {
 	var err error
 	ctx := context.Background()
 
 	var initialized *bool
-	err = db.QueryRow(
+	err = conn.QueryRow(
 		ctx,
 		`SELECT TRUE
 		FROM pg_namespace
@@ -42,7 +43,7 @@ func (target MigrationTarget) Migrate(
 	version := ""
 	if initialized != nil && *initialized {
 		var variable sql.NullString
-		err = db.QueryRow(
+		err = conn.QueryRow(
 			ctx,
 			`SELECT value
 			FROM prestress.database_variable
@@ -76,12 +77,12 @@ func (target MigrationTarget) Migrate(
 		}
 
 		fmt.Printf("Running migration for %s: %s\n", target.Name, name)
-		_, err = db.Exec(ctx, string(migration))
+		_, err = conn.Exec(ctx, string(migration))
 		if err != nil {
 			return err
 		}
 
-		_, err = db.Exec(
+		_, err = conn.Exec(
 			ctx,
 			`INSERT INTO prestress.database_variable (name, value)
 			VALUES ($1, $2)

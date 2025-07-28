@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrInvalidSchema = errors.New("invalid schema")
@@ -44,7 +45,6 @@ func (op BeginOperationHandler) Execute(
 		),
 	)
 	if err != nil {
-		ctx.Tx.Rollback(ctx)
 		return
 	}
 
@@ -55,7 +55,11 @@ func (op BeginOperationHandler) Execute(
 func (BeginOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
-	handle func(EmptyOperationParams) (OperationContext, error),
+	handle func(EmptyOperationParams) (
+		OperationContext,
+		OperationContext,
+		error,
+	),
 ) {
 	writer.WriteHeader(500)
 }
@@ -63,14 +67,14 @@ func (BeginOperationHandler) Handle(
 type BeginOperation struct {
 	*Operation[EmptyOperationParams, OperationContext]
 
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
 func (op BeginOperation) Begin(
 	initCtx context.Context,
 	schema string,
 ) (ctx OperationContext, err error) {
-	tx, err := op.conn.Begin(initCtx)
+	tx, err := op.pool.Begin(initCtx)
 	if err != nil {
 		return
 	}
@@ -92,9 +96,9 @@ func (op BeginOperation) BeginHTTP(
 	return
 }
 
-func NewBeginOperation(conn *pgx.Conn) *BeginOperation {
+func NewBeginOperation(pool *pgxpool.Pool) *BeginOperation {
 	return &BeginOperation{
 		NewOperation(new(BeginOperationHandler), nil),
-		conn,
+		pool,
 	}
 }

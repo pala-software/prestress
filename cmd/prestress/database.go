@@ -4,11 +4,11 @@ import (
 	"context"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func databaseFromEnv() (conn *pgx.Conn, err error) {
+func databaseFromEnv() (pool *pgxpool.Pool, err error) {
 	connStr := os.Getenv("PRESTRESS_DB")
-	conn, err = pgx.Connect(context.Background(), connStr)
+	pool, err = pgxpool.New(context.Background(), connStr)
 	return
 }

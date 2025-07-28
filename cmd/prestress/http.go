@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 
+	"gitlab.com/pala-software/prestress/pkg/otel"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -31,6 +32,7 @@ func (handler corsHandler) ServeHTTP(
 func startHttpServer(
 	mux *http.ServeMux,
 	lifecycle *prestress.Lifecycle,
+	otel *otel.OTel,
 ) (err error) {
 	// Start listening
 	// TODO: Allow configuring port
@@ -59,10 +61,10 @@ func startHttpServer(
 
 	// Serve HTTP
 	srv := &http.Server{
-		Handler: corsHandler{
+		Handler: otel.Middleware()(corsHandler{
 			AllowedOrigins: os.Getenv("PRESTRESS_ALLOWED_ORIGINS"),
 			Next:           mux,
-		},
+		}),
 	}
 	srvErr := make(chan error, 1)
 	go func() {
