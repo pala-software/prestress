@@ -5,7 +5,7 @@ test:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   image: golang:1.24.2-alpine
   services:
-    - postgres:16.5
+    - postgres:17
   script:
     - apk add postgresql17-client
     - psql $PRESTRESS_TEST_DB < init.sql
