@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"gitlab.com/pala-software/prestress/pkg/auth"
 	"gitlab.com/pala-software/prestress/pkg/crud"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
@@ -30,18 +31,44 @@ func (SubscribeOperationHandler) Name() string {
 	return "Subscribe"
 }
 
-func (op SubscribeOperationHandler) Execute(
+func (op *SubscribeOperationHandler) Execute(
 	ctx prestress.OperationContext,
 	params SubscribeParams,
 ) (sub *Subscription, err error) {
+	authRes, ok := ctx.Variables["auth"].(*auth.AuthenticationResult)
+	if !ok {
+		err = auth.ErrAuthenticationRequired
+		return
+	}
+
+	variables := map[string]any{}
+	if authRes.Variables != nil {
+		variables = authRes.Variables
+	}
+
+	encodedVariables, err := json.Marshal(variables)
+	if err != nil {
+		return
+	}
+
+	ctx2, cancel := context.WithCancel(ctx)
+	conn, err := op.pool.Acquire(ctx2)
+	if err != nil {
+		cancel()
+		return
+	}
+
 	var subId int
-	err = ctx.Tx.QueryRow(
+	err = conn.QueryRow(
 		ctx,
-		"SELECT prestress.setup_subscription($1, $2)",
+		"SELECT prestress.setup_subscription($1, $2, $3, $4)",
+		authRes.Role,
 		ctx.Schema,
 		params.Table,
+		encodedVariables,
 	).Scan(&subId)
 	if err != nil {
+		cancel()
 		return
 	}
 
@@ -51,7 +78,9 @@ func (op SubscribeOperationHandler) Execute(
 	op.subscriptions[subId] = sub
 
 	context.AfterFunc(ctx, func() {
-		_, err := op.pool.Exec(
+		defer cancel()
+
+		_, err := conn.Exec(
 			context.Background(),
 			"SELECT prestress.teardown_subscription($1)",
 			subId,

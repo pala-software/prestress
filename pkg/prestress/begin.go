@@ -73,6 +73,7 @@ type BeginOperation struct {
 func (op BeginOperation) Begin(
 	initCtx context.Context,
 	schema string,
+	request *http.Request,
 ) (ctx OperationContext, err error) {
 	tx, err := op.pool.Begin(initCtx)
 	if err != nil {
@@ -80,9 +81,11 @@ func (op BeginOperation) Begin(
 	}
 
 	ctx = OperationContext{
-		Context: initCtx,
-		Tx:      tx,
-		Schema:  schema,
+		Context:   initCtx,
+		Request:   request,
+		Tx:        tx,
+		Schema:    schema,
+		Variables: map[string]Loggable{},
 	}
 	ctx, err = op.Execute(ctx, EmptyOperationParams{})
 	return
@@ -92,7 +95,7 @@ func (op BeginOperation) BeginHTTP(
 	request *http.Request,
 ) (ctx OperationContext, err error) {
 	schema := request.PathValue("schema")
-	ctx, err = op.Begin(request.Context(), schema)
+	ctx, err = op.Begin(request.Context(), schema, request)
 	return
 }
 

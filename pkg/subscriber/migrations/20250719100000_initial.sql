@@ -315,30 +315,46 @@ AS $$
 $$;
 
 CREATE FUNCTION prestress.setup_subscription(
+  role_name NAME,
   table_schema NAME,
-  table_name NAME)
+  table_name NAME,
+  authorization_variables jsonb)
 RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
   DECLARE
-    subscription_id BIGINT := nextval('prestress.subscription_id');
     original_role NAME := CURRENT_USER;
+    subscription_id BIGINT := nextval('prestress.subscription_id');
     target_schema NAME;
     target_table NAME;
     trigger_id BIGINT := 1;
   BEGIN
+    EXECUTE format('SET LOCAL ROLE TO %I', role_name);
+
     EXECUTE format(
       'CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
+        DECLARE
+          original_authorization jsonb;
         BEGIN
+          SELECT prestress.dump_authorization() INTO original_authorization;
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.end_authorized();
+          END IF;
+          PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_state(%L, %L, %L);
+          PERFORM prestress.end_authorized();
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.begin_authorized(original_authorization);
+          END IF;
           RETURN NULL;
         END;
       $s$;',
       'prestress_before_' || subscription_id,
+      authorization_variables,
       subscription_id,
       table_schema,
       table_name
@@ -350,20 +366,32 @@ AS $$
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
+        DECLARE
+          original_authorization jsonb;
         BEGIN
+          SELECT prestress.dump_authorization() INTO original_authorization;
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.end_authorized();
+          END IF;
+          PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_change(%L, %L, %L);
           PERFORM prestress.drop_state(%L);
+          PERFORM prestress.end_authorized();
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.begin_authorized(original_authorization);
+          END IF;
           RETURN NULL;
         END;
       $s$;',
       'prestress_after_' || subscription_id,
+      authorization_variables,
       subscription_id,
       table_schema,
       table_name,
       subscription_id
     );
 
-    RESET ROLE;
+    EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
     FOR target_schema, target_table IN
       SELECT related_table.table_schema, related_table.table_name
@@ -394,8 +422,6 @@ AS $$
 
       SELECT trigger_id + 1 INTO trigger_id;
     END LOOP;
-
-    EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
     RETURN subscription_id;
   END;

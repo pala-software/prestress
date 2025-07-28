@@ -25,12 +25,11 @@ $$;
 CREATE FUNCTION prestress.begin_authorized(variables jsonb)
 RETURNS VOID
 LANGUAGE plpgsql
-SET client_min_messages TO warning
 AS $$
   BEGIN
-    CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_auth
+    CREATE TEMPORARY TABLE pg_temp.prestress_auth
       (key TEXT PRIMARY KEY, value TEXT)
-    ON COMMIT DELETE ROWS;
+    ON COMMIT DROP;
 
     INSERT INTO pg_temp.prestress_auth
     SELECT key, value
@@ -44,6 +43,27 @@ LANGUAGE plpgsql
 AS $$
   BEGIN
     DROP TABLE pg_temp.prestress_auth;
+  END;
+$$;
+
+CREATE FUNCTION prestress.dump_authorization()
+RETURNS jsonb
+LANGUAGE plpgsql
+AS $$
+  DECLARE
+    variables jsonb;
+  BEGIN
+    IF EXISTS (
+      SELECT
+      FROM information_schema.tables 
+      WHERE table_type = 'LOCAL TEMPORARY'
+      AND table_name = 'prestress_auth'
+    ) THEN
+      SELECT jsonb_object(array_agg(t.key), array_agg(t.value))
+        FROM pg_temp.prestress_auth AS t
+        INTO variables;
+    END IF;
+    RETURN variables;
   END;
 $$;
 
