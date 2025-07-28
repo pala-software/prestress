@@ -24,9 +24,15 @@
   languages.go.enable = true;
   services.postgres = {
     enable = true;
+    initialScript = ''
+      CREATE ROLE anonymous;
+      CREATE ROLE authenticated;
+
+      GRANT anonymous TO authenticated WITH INHERIT TRUE;
+    '';
     initialDatabases = [
-      { name = "prestress_dev"; schema = ./seed.sql; }
-      { name = "prestress_test"; schema = ./seed.sql; }
+      { name = "prestress_dev"; }
+      { name = "prestress_test"; }
     ];
   };
   processes.prestress = {

@@ -27,13 +27,13 @@ Prestress itself.
    rm .devenv/state/postgres
    ```
 
-5. To recreate database structure on startup after wipe, you can write the
-   database schema in `seed.sql`. This can be useful when developing and testing
-   manually. But remember to write automated tests too when making making
-   changes to Prestress. Remember to reinitialize database each time you modify
-   `seed.sql` (step 4).
-  
-   The following example schema can be appended to `seed.sql`:
+5. To recreate database structure you can use `psql prestress_dev` command. But
+   remember to write automated tests too when making making changes to
+   Prestress.
+
+   The following example schema applied by running `psql prestress_dev` and
+   pasting it to the console:
+
    ```sql
    CREATE TABLE document (id SERIAL PRIMARY KEY, body TEXT);
    GRANT ALL ON TABLE document TO anonymous;
@@ -52,19 +52,19 @@ Prestress itself.
    ```
 
 7. To test out authentication, you can use mock identity provider which comes
-   with the project. Just start it and you will be prompted for wanted role and 
+   with the project. Just start it and you will be prompted for wanted role and
    user ID (token subject). After inputting those you'll get access token that
    you can use for HTTP requests. You have to keep the command running because
    it acts as a server.
 
    ```sh
-   go run cmd/idp/idp.go 
+   go run cmd/idp/idp.go
    Enter wanted role name: authenticated
    Enter wanted user ID: user-1
    Created token:
    TOKEN-1
 
-   Enter wanted role name: 
+   Enter wanted role name:
    ```
 
 8. Again, you can use httpie to send authenticated requests by adding
