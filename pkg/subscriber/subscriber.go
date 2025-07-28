@@ -36,6 +36,7 @@ func (feature *Subscriber) Provider() any {
 		create *crud.CreateOperation,
 		update *crud.UpdateOperation,
 		delete *crud.DeleteOperation,
+		core *prestress.Core,
 	) (
 		self *Subscriber,
 		subscribe *SubscribeOperation,
@@ -47,6 +48,7 @@ func (feature *Subscriber) Provider() any {
 			update,
 			delete,
 		)
+		core.Operations().Register(subscribe)
 		return
 	}
 }
@@ -54,12 +56,9 @@ func (feature *Subscriber) Provider() any {
 func (feature *Subscriber) Invoker() any {
 	return func(
 		subscribe *SubscribeOperation,
-		core *prestress.Core,
 		mux *http.ServeMux,
 		mig *migrator.Migrator,
 	) (err error) {
-		core.Operations().Register(subscribe)
-
 		err = feature.RegisterRoutes(mux, subscribe)
 		if err != nil {
 			return

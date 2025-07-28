@@ -13,6 +13,5 @@ type Subscription struct {
 }
 
 func (Subscription) Details() map[string]string {
-	// TODO: Implement
 	return map[string]string{}
 }

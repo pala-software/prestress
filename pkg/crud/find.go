@@ -29,8 +29,7 @@ type FindResult struct {
 	pgx.Rows
 }
 
-func (FindResult) Details() map[string]string {
-	// TODO: Implement
+func (res FindResult) Details() map[string]string {
 	return map[string]string{}
 }
 

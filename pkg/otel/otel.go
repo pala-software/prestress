@@ -111,7 +111,7 @@ func (feature OTel) RegisterHooks(
 				index += 2
 			}
 
-			logger.Info("Before"+op.Name(), detailsSlice...)
+			logger.Info("After"+op.Name(), detailsSlice...)
 			return nil
 		})
 	}

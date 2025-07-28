@@ -22,6 +22,7 @@ func CrudFromEnv() *Crud {
 func (feature *Crud) Provider() any {
 	return func(
 		begin *prestress.BeginOperation,
+		core *prestress.Core,
 	) (
 		self *Crud,
 		find *FindOperation,
@@ -30,28 +31,28 @@ func (feature *Crud) Provider() any {
 		delete *DeleteOperation,
 	) {
 		self = feature
+
 		find = NewFindOperation(begin)
 		create = NewCreateOperation(begin)
 		update = NewUpdateOperation(begin)
 		delete = NewDeleteOperation(begin)
+
+		core.Operations().Register(find)
+		core.Operations().Register(create)
+		core.Operations().Register(update)
+		core.Operations().Register(delete)
 		return
 	}
 }
 
 func (feature *Crud) Invoker() any {
 	return func(
-		core *prestress.Core,
 		mux *http.ServeMux,
 		find *FindOperation,
 		create *CreateOperation,
 		update *UpdateOperation,
 		delete *DeleteOperation,
 	) (err error) {
-		core.Operations().Register(find)
-		core.Operations().Register(create)
-		core.Operations().Register(update)
-		core.Operations().Register(delete)
-
 		err = feature.RegisterRoutes(
 			mux,
 			find,

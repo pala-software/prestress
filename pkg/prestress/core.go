@@ -9,7 +9,7 @@ type Core struct {
 	ops Registry[AnyOperation]
 }
 
-func (feature Core) Operations() *Registry[AnyOperation] {
+func (feature *Core) Operations() *Registry[AnyOperation] {
 	return &feature.ops
 }
 
