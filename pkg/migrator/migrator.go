@@ -20,11 +20,10 @@ func (mig Migrator) Migrate(pool *pgxpool.Pool) (err error) {
 	defer cancel()
 
 	conn, err := pool.Acquire(ctx)
+	defer conn.Release()
 	if err != nil {
 		return
 	}
-
-	defer conn.Release()
 
 	for _, target := range mig.Targets.Value() {
 		err = target.Migrate(conn, false)
