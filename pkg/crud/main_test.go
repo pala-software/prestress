@@ -24,9 +24,9 @@ var migrations embed.FS
 var container *dig.Container
 
 var features = []prestress.Feature{
-	prestress.CoreFromEnv(),
-	migrator.MigratorFromEnv(),
-	crud.CrudFromEnv(),
+	&prestress.Core{},
+	&migrator.Migrator{},
+	&crud.Crud{},
 }
 
 type Item struct {
