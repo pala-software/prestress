@@ -9,7 +9,6 @@ test:
   script:
     - apk add postgresql17-client
     - psql $PRESTRESS_TEST_DB < init.sql
-    - export PRESTRESS_TEST_DB
     - go get github.com/boumenot/gocover-cobertura
     - go test ./pkg/... -coverprofile=coverage.txt -covermode count
     - go tool cover -func coverage.txt

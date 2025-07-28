@@ -16,7 +16,10 @@ func MigratorFromEnv() *Migrator {
 }
 
 func (mig Migrator) Migrate(pool *pgxpool.Pool) (err error) {
-	conn, err := pool.Acquire(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return
 	}

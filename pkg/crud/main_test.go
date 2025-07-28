@@ -97,7 +97,10 @@ func runTestMigrations(mig *migrator.Migrator, pool *pgxpool.Pool) (err error) {
 		Directory: migrations,
 	}
 
-	conn, err := pool.Acquire(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	conn, err := pool.Acquire(ctx)
 	if err != nil {
 		return
 	}
