@@ -9,7 +9,7 @@ import (
 )
 
 func TestFindWithCancelledContext(t *testing.T) {
-	t.Skip("skipping: acquiring connection from the pool with done context hangs in CI")
+	t.Skip("skipping: trying to re-acquire connection from the pool with done context hangs in CI")
 
 	err := func() (err error) {
 		initCtx, cancel := context.WithCancel(context.Background())
