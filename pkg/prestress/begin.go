@@ -70,7 +70,7 @@ type BeginOperation struct {
 	pool *pgxpool.Pool
 }
 
-func (op *BeginOperation) Begin(
+func (op BeginOperation) Begin(
 	initCtx context.Context,
 	schema string,
 	request *http.Request,
@@ -91,7 +91,7 @@ func (op *BeginOperation) Begin(
 	return
 }
 
-func (op *BeginOperation) BeginHTTP(
+func (op BeginOperation) BeginHTTP(
 	request *http.Request,
 ) (ctx OperationContext, err error) {
 	schema := request.PathValue("schema")
