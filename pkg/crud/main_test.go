@@ -101,10 +101,11 @@ func runTestMigrations(mig *migrator.Migrator, pool *pgxpool.Pool) (err error) {
 	defer cancel()
 
 	conn, err := pool.Acquire(ctx)
-	defer conn.Release()
 	if err != nil {
 		return
 	}
+
+	defer conn.Release()
 
 	// Run test migrations forcefully
 	err = migration.Migrate(conn, true)
