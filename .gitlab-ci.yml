@@ -21,6 +21,8 @@ test:
     PRESTRESS_TEST_DB: postgres://postgres:postgres@postgres/postgres
   coverage: '/total:\s+\(statements\)\s+\d+.\d+%/'
   artifacts:
+    paths:
+      - coverage.txt
     reports:
       coverage_report:
         coverage_format: cobertura
