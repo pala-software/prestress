@@ -25,9 +25,11 @@ func TestFindWithCancelledContext(t *testing.T) {
 			[]string{},
 		)
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
+		err = ctx.Commit()
 		return
 	}()
 
@@ -54,9 +56,11 @@ func TestFindAll(t *testing.T) {
 			[]string{"1", "2"},
 		)
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
+		err = ctx.Commit()
 		return
 	}()
 
@@ -79,9 +83,11 @@ func TestFindWithFilter(t *testing.T) {
 			[]string{"1"},
 		)
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
+		err = ctx.Commit()
 		return
 	}()
 

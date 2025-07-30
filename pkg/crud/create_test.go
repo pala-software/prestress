@@ -36,6 +36,12 @@ func TestCreateWithCancelledContext(t *testing.T) {
 			)
 		}
 
+		if err != nil {
+			ctx.Rollback()
+		} else {
+			ctx.Commit()
+		}
+
 		checkCtx, err := begin(context.Background())
 		if err != nil {
 			return
@@ -48,14 +54,11 @@ func TestCreateWithCancelledContext(t *testing.T) {
 			[]string{},
 		)
 		if err != nil {
+			checkCtx.Rollback()
 			return
 		}
 
 		err = checkCtx.Commit()
-		if err != nil {
-			return
-		}
-
 		return
 	})
 
@@ -82,6 +85,7 @@ func TestCreate(t *testing.T) {
 		}
 		_, err = create.Execute(ctx, params)
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
@@ -92,9 +96,11 @@ func TestCreate(t *testing.T) {
 			[]string{"3"},
 		)
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
+		ctx.Commit()
 		return
 	})
 

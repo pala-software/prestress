@@ -88,6 +88,10 @@ func (op BeginOperation) Begin(
 		Variables: map[string]Loggable{},
 	}
 	ctx, err = op.Execute(ctx, EmptyOperationParams{})
+	if err != nil {
+		tx.Rollback(initCtx)
+	}
+
 	return
 }
 

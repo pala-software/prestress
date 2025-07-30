@@ -26,6 +26,7 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 
 		err = expectItems(ctx, table, where, []string{oldValue})
 		if err != nil {
+			ctx.Rollback()
 			cancel()
 			return
 		}
@@ -45,6 +46,12 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 			)
 		}
 
+		if err != nil {
+			ctx.Rollback()
+		} else {
+			ctx.Commit()
+		}
+
 		checkCtx, err := begin(context.Background())
 		if err != nil {
 			return
@@ -52,14 +59,11 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 
 		err = expectItems(checkCtx, table, where, []string{oldValue})
 		if err != nil {
+			checkCtx.Rollback()
 			return
 		}
 
 		err = checkCtx.Commit()
-		if err != nil {
-			return
-		}
-
 		return
 	})
 
@@ -84,6 +88,7 @@ func TestUpdate(t *testing.T) {
 
 		err = expectItems(ctx, table, where, []string{oldValue})
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
@@ -94,14 +99,17 @@ func TestUpdate(t *testing.T) {
 		}
 		_, err = update.Execute(ctx, params)
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
 		err = expectItems(ctx, table, where, []string{})
 		if err != nil {
+			ctx.Rollback()
 			return
 		}
 
+		ctx.Commit()
 		return
 	})
 
