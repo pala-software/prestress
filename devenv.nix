@@ -24,15 +24,16 @@
   languages.go.enable = true;
   services.postgres = {
     enable = true;
+    initialScript = builtins.readFile ./init.sql;
     initialDatabases = [
-      { name = "prestress_dev"; schema = ./seed.sql; }
-      { name = "prestress_test"; schema = ./seed.sql; }
+      { name = "prestress_dev"; }
+      { name = "prestress_test"; }
     ];
   };
   processes.prestress = {
     exec = ''
-      go run cmd/prestress/prestress.go migrate && \
-      wgo run cmd/prestress/prestress.go start
+      go run ./cmd/prestress migrate && \
+      wgo run ./cmd/prestress start
     '';
     process-compose.depends_on.postgres.condition = "process_healthy";
   };

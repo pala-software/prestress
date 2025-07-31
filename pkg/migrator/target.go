@@ -1,29 +1,29 @@
-package prestress
+package migrator
 
 import (
 	"context"
 	"database/sql"
-	"embed"
 	"fmt"
 	"io/fs"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-//go:embed migrations/*.sql
-var migrations embed.FS
 
 type MigrationTarget struct {
 	Name      string
 	Directory fs.FS
 }
 
-func (target MigrationTarget) Migrate(server Server, forceRunAll bool) error {
+func (target MigrationTarget) Migrate(
+	conn *pgxpool.Conn,
+	forceRunAll bool,
+) error {
 	var err error
 	ctx := context.Background()
 
 	var initialized *bool
-	err = server.DB.QueryRow(
+	err = conn.QueryRow(
 		ctx,
 		`SELECT TRUE
 		FROM pg_namespace
@@ -43,7 +43,7 @@ func (target MigrationTarget) Migrate(server Server, forceRunAll bool) error {
 	version := ""
 	if initialized != nil && *initialized {
 		var variable sql.NullString
-		err = server.DB.QueryRow(
+		err = conn.QueryRow(
 			ctx,
 			`SELECT value
 			FROM prestress.database_variable
@@ -77,12 +77,12 @@ func (target MigrationTarget) Migrate(server Server, forceRunAll bool) error {
 		}
 
 		fmt.Printf("Running migration for %s: %s\n", target.Name, name)
-		_, err = server.DB.Exec(ctx, string(migration))
+		_, err = conn.Exec(ctx, string(migration))
 		if err != nil {
 			return err
 		}
 
-		_, err = server.DB.Exec(
+		_, err = conn.Exec(
 			ctx,
 			`INSERT INTO prestress.database_variable (name, value)
 			VALUES ($1, $2)
@@ -95,56 +95,5 @@ func (target MigrationTarget) Migrate(server Server, forceRunAll bool) error {
 		}
 	}
 
-	return nil
-}
-
-func (server *Server) AddMigration(name string, directory fs.FS) {
-	server.migrations = append(
-		server.migrations,
-		MigrationTarget{Name: name, Directory: directory},
-	)
-}
-
-func (server Server) Migrate() error {
-	var err error
-
-	dir, err := fs.Sub(migrations, "migrations")
-	if err != nil {
-		return err
-	}
-
-	target := MigrationTarget{
-		Name:      "prestress",
-		Directory: dir,
-	}
-	err = target.Migrate(server, false)
-	if err != nil {
-		return err
-	}
-
-	for _, target := range server.migrations {
-		err = target.Migrate(server, false)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (server Server) RunMigrations() error {
-	var err error
-
-	err = server.ConnectToDatabase()
-	if err != nil {
-		return err
-	}
-
-	err = server.Migrate()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Database is up to date!")
 	return nil
 }

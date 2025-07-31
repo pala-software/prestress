@@ -323,8 +323,8 @@ RETURNS BIGINT
 LANGUAGE plpgsql
 AS $$
   DECLARE
-    subscription_id BIGINT := nextval('prestress.subscription_id');
     original_role NAME := CURRENT_USER;
+    subscription_id BIGINT := nextval('prestress.subscription_id');
     target_schema NAME;
     target_table NAME;
     trigger_id BIGINT := 1;
@@ -337,10 +337,19 @@ AS $$
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
+        DECLARE
+          original_authorization jsonb;
         BEGIN
+          SELECT prestress.dump_authorization() INTO original_authorization;
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.end_authorized();
+          END IF;
           PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_state(%L, %L, %L);
           PERFORM prestress.end_authorized();
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.begin_authorized(original_authorization);
+          END IF;
           RETURN NULL;
         END;
       $s$;',
@@ -357,11 +366,20 @@ AS $$
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
+        DECLARE
+          original_authorization jsonb;
         BEGIN
+          SELECT prestress.dump_authorization() INTO original_authorization;
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.end_authorized();
+          END IF;
           PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_change(%L, %L, %L);
           PERFORM prestress.drop_state(%L);
           PERFORM prestress.end_authorized();
+          IF original_authorization IS NOT NULL THEN
+            PERFORM prestress.begin_authorized(original_authorization);
+          END IF;
           RETURN NULL;
         END;
       $s$;',
@@ -380,8 +398,6 @@ AS $$
       FROM prestress.get_related_tables(table_schema, table_name)
       AS related_table
     LOOP
-      RAISE NOTICE '%s.%s', target_schema, target_table;
-
       EXECUTE format(
         'CREATE TRIGGER %I
         BEFORE INSERT OR UPDATE OR DELETE ON %I.%I

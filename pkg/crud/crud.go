@@ -10,8 +10,6 @@ import (
 type Crud struct {
 	// Root path where CRUD resources can be accessed.
 	RootPath string
-
-	server *prestress.Server
 }
 
 // Construct CRUD Feature and read configuration from environment variables.
@@ -21,9 +19,62 @@ func CrudFromEnv() *Crud {
 	return &feature
 }
 
-func (feature *Crud) Apply(server *prestress.Server) error {
-	feature.server = server
+func (feature *Crud) Provider() any {
+	return func(
+		begin *prestress.BeginOperation,
+		core *prestress.Core,
+	) (
+		self *Crud,
+		find *FindOperation,
+		create *CreateOperation,
+		update *UpdateOperation,
+		delete *DeleteOperation,
+	) {
+		self = feature
 
+		find = NewFindOperation(begin)
+		create = NewCreateOperation(begin)
+		update = NewUpdateOperation(begin)
+		delete = NewDeleteOperation(begin)
+
+		core.Operations().Register(find)
+		core.Operations().Register(create)
+		core.Operations().Register(update)
+		core.Operations().Register(delete)
+		return
+	}
+}
+
+func (feature *Crud) Invoker() any {
+	return func(
+		mux *http.ServeMux,
+		find *FindOperation,
+		create *CreateOperation,
+		update *UpdateOperation,
+		delete *DeleteOperation,
+	) (err error) {
+		err = feature.RegisterRoutes(
+			mux,
+			find,
+			create,
+			update,
+			delete,
+		)
+		if err != nil {
+			return
+		}
+
+		return
+	}
+}
+
+func (feature Crud) RegisterRoutes(
+	mux *http.ServeMux,
+	find *FindOperation,
+	create *CreateOperation,
+	update *UpdateOperation,
+	delete *DeleteOperation,
+) (err error) {
 	rootPath := "/"
 	if feature.RootPath != "" {
 		rootPath = feature.RootPath
@@ -32,32 +83,31 @@ func (feature *Crud) Apply(server *prestress.Server) error {
 		rootPath = ""
 	}
 
-	mux := feature.server.HTTP()
 	mux.HandleFunc(
 		fmt.Sprintf("OPTIONS %s/{schema}/{table}", rootPath),
-		feature.handleTableOptions,
+		handleTableOptions,
 	)
-	mux.HandleFunc(
+	mux.Handle(
 		fmt.Sprintf("GET %s/{schema}/{table}", rootPath),
-		feature.handleFind,
+		find,
 	)
-	mux.HandleFunc(
+	mux.Handle(
 		fmt.Sprintf("POST %s/{schema}/{table}", rootPath),
-		feature.handleCreate,
+		create,
 	)
-	mux.HandleFunc(
+	mux.Handle(
 		fmt.Sprintf("PATCH %s/{schema}/{table}", rootPath),
-		feature.handleUpdate,
+		update,
 	)
-	mux.HandleFunc(
+	mux.Handle(
 		fmt.Sprintf("DELETE %s/{schema}/{table}", rootPath),
-		feature.handleDelete,
+		delete,
 	)
 
-	return nil
+	return
 }
 
-func (feature Crud) handleTableOptions(
+func handleTableOptions(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {

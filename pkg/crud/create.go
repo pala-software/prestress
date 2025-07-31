@@ -1,7 +1,6 @@
 package crud
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,124 +12,79 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-const CreateOperation = "Create"
+type CreateParams struct {
+	Table string
+	Data  map[string]any
+}
 
-func (feature Crud) Create(
-	ctx context.Context,
-	auth prestress.AuthenticationResult,
-	schema string,
-	table string,
-	data map[string]any,
-) error {
-	var err error
-
-	err = feature.server.Emit(BeforeBeginOperationEvent{
-		OperationName: CreateOperation,
-		Auth:          &auth,
-		Schema:        &schema,
-		Table:         &table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
+func (params CreateParams) Details() map[string]string {
+	return map[string]string{
+		"table": params.Table,
 	}
+}
 
-	tx, err := feature.server.Begin(ctx, auth, schema)
-	if err != nil {
-		return err
-	}
+type CreateOperationHandler struct{}
 
-	err = feature.server.Emit(AfterBeginOperationEvent{
-		OperationName: CreateOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
+func (CreateOperationHandler) Name() string {
+	return "Create"
+}
 
-	if len(data) == 0 {
-		_, err = tx.Exec(
+func (op CreateOperationHandler) Execute(
+	ctx prestress.OperationContext,
+	params CreateParams,
+) (res prestress.EmptyOperationResult, err error) {
+	if len(params.Data) == 0 {
+		_, err = ctx.Tx.Exec(
 			ctx,
 			fmt.Sprintf(
 				"INSERT INTO %s DEFAULT VALUES",
-				pgx.Identifier{schema, table}.Sanitize(),
+				pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
 			),
 		)
 		if err != nil {
-			tx.Rollback(ctx)
-			return err
+			return
 		}
 	} else {
-		columns := make([]string, 0, len(data))
-		values := make([]any, 0, len(data))
-		placeholders := make([]string, 0, len(data))
+		columns := make([]string, 0, len(params.Data))
+		values := make([]any, 0, len(params.Data))
+		placeholders := make([]string, 0, len(params.Data))
 		n := 1
-		for key, value := range data {
+		for key, value := range params.Data {
 			columns = append(columns, pgx.Identifier{key}.Sanitize())
 			values = append(values, value)
 			placeholders = append(placeholders, "$"+strconv.Itoa(n))
 			n++
 		}
 
-		_, err = tx.Exec(
+		_, err = ctx.Tx.Exec(
 			ctx,
 			fmt.Sprintf(
 				"INSERT INTO %s (%s) VALUES (%s)",
-				pgx.Identifier{schema, table}.Sanitize(),
+				pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
 				strings.Join(columns, ", "),
 				strings.Join(placeholders, ", "),
 			),
 			values...,
 		)
 		if err != nil {
-			tx.Rollback(ctx)
-			return err
+			return
 		}
 	}
 
-	err = feature.server.Emit(BeforeCommitOperationEvent{
-		OperationName: CreateOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = feature.server.Emit(AfterCommitOperationEvent{
-		OperationName: CreateOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }
 
-func (feature Crud) handleCreate(
+func (op CreateOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
+	handle func(CreateParams) (
+		prestress.EmptyOperationResult,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
-	schema := request.PathValue("schema")
 	table := request.PathValue("table")
 
 	if request.Body == nil {
@@ -153,16 +107,37 @@ func (feature Crud) handleCreate(
 		return
 	}
 
-	auth := feature.server.Authenticate(writer, request)
-	if auth == nil {
+	params := CreateParams{
+		Table: table,
+		Data:  data,
+	}
+	_, ctx, err := handle(params)
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
-	err = feature.Create(request.Context(), *auth, schema, table, data)
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
 	writer.WriteHeader(204)
+}
+
+type CreateOperation struct {
+	*prestress.Operation[
+		CreateParams,
+		prestress.EmptyOperationResult,
+	]
+}
+
+func NewCreateOperation(begin *prestress.BeginOperation) *CreateOperation {
+	return &CreateOperation{
+		prestress.NewOperation(
+			new(CreateOperationHandler),
+			begin,
+		),
+	}
 }

@@ -2,77 +2,110 @@ package prestress
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+var ErrInvalidSchema = errors.New("invalid schema")
 var ErrForbiddenSchema = errors.New("forbidden schema")
 
-func (server Server) Begin(
-	ctx context.Context,
-	auth AuthenticationResult,
-	schema string,
-) (pgx.Tx, error) {
-	var err error
+type BeginOperationHandler struct{}
 
-	if schema == "pg_temp" {
-		return nil, ErrForbiddenSchema
+func (BeginOperationHandler) Name() string {
+	return "Begin"
+}
+
+func (op BeginOperationHandler) Execute(
+	initCtx OperationContext,
+	params EmptyOperationParams,
+) (ctx OperationContext, err error) {
+	ctx = initCtx
+
+	if ctx.Schema == "" {
+		err = ErrInvalidSchema
+		return
 	}
 
-	tx, err := server.DB.Begin(ctx)
-	if err != nil {
-		return nil, err
+	if ctx.Schema == "pg_temp" {
+		err = ErrForbiddenSchema
+		return
 	}
 
-	_, err = tx.Exec(
+	_, err = ctx.Tx.Exec(
 		ctx,
 		fmt.Sprintf(
 			// pg_temp is set to last in search_path so that we don't accidentally or
 			// in any case query temporary tables implicitly.
 			"SET LOCAL search_path TO %s, pg_temp",
-			pgx.Identifier{schema}.Sanitize(),
+			pgx.Identifier{ctx.Schema}.Sanitize(),
 		),
 	)
 	if err != nil {
-		tx.Rollback(ctx)
-		return nil, err
+		return
 	}
 
-	_, err = tx.Exec(
-		ctx,
-		fmt.Sprintf(
-			"SET LOCAL role TO %s",
-			pgx.Identifier{auth.Role}.Sanitize(),
-		),
-	)
+	return
+}
+
+// Begin operation should never be called from HTTP.
+func (BeginOperationHandler) Handle(
+	writer http.ResponseWriter,
+	request *http.Request,
+	handle func(EmptyOperationParams) (
+		OperationContext,
+		OperationContext,
+		error,
+	),
+) {
+	writer.WriteHeader(500)
+}
+
+type BeginOperation struct {
+	*Operation[EmptyOperationParams, OperationContext]
+
+	pool *pgxpool.Pool
+}
+
+func (op BeginOperation) Begin(
+	initCtx context.Context,
+	schema string,
+	request *http.Request,
+) (ctx OperationContext, err error) {
+	tx, err := op.pool.Begin(initCtx)
 	if err != nil {
-		tx.Rollback(ctx)
-		return nil, err
+		return
 	}
 
-	variables := map[string]any{}
-	if auth.Variables != nil {
-		variables = auth.Variables
+	ctx = OperationContext{
+		Context:   initCtx,
+		Request:   request,
+		Tx:        tx,
+		Schema:    schema,
+		Variables: map[string]Loggable{},
 	}
-
-	encodedVariables, err := json.Marshal(variables)
+	ctx, err = op.Execute(ctx, EmptyOperationParams{})
 	if err != nil {
-		tx.Rollback(ctx)
-		return nil, err
+		tx.Rollback(initCtx)
 	}
 
-	_, err = tx.Exec(
-		ctx,
-		"SELECT prestress.begin_authorized($1)",
-		encodedVariables,
-	)
-	if err != nil {
-		tx.Rollback(ctx)
-		return nil, err
-	}
+	return
+}
 
-	return tx, nil
+func (op BeginOperation) BeginHTTP(
+	request *http.Request,
+) (ctx OperationContext, err error) {
+	schema := request.PathValue("schema")
+	ctx, err = op.Begin(request.Context(), schema, request)
+	return
+}
+
+func NewBeginOperation(pool *pgxpool.Pool) *BeginOperation {
+	return &BeginOperation{
+		NewOperation(new(BeginOperationHandler), nil),
+		pool,
+	}
 }

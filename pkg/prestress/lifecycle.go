@@ -1,27 +1,12 @@
 package prestress
 
-import "context"
+type LifecycleHook func() error
 
-type ServerStartEvent struct {
-	Context context.Context
+type Lifecycle struct {
+	Start    Registry[LifecycleHook]
+	Shutdown Registry[LifecycleHook]
 }
 
-func (ServerStartEvent) Event() string {
-	return "ServerStartEvent"
-}
-
-func (ServerStartEvent) Details() map[string]string {
-	return map[string]string{}
-}
-
-type ServerShutdownEvent struct {
-	Context context.Context
-}
-
-func (ServerShutdownEvent) Event() string {
-	return "ServerShutdownEvent"
-}
-
-func (ServerShutdownEvent) Details() map[string]string {
-	return map[string]string{}
+func NewLifecycle() *Lifecycle {
+	return new(Lifecycle)
 }

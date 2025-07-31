@@ -1,7 +1,6 @@
 package crud
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -9,119 +8,85 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-const DeleteOperation = "Delete"
+type DeleteParams struct {
+	Table string
+	Where Where
+}
 
-func (feature Crud) Delete(
-	ctx context.Context,
-	auth prestress.AuthenticationResult,
-	schema string,
-	table string,
-	where Where,
-) error {
-	var err error
-
-	err = feature.server.Emit(BeforeBeginOperationEvent{
-		OperationName: DeleteOperation,
-		Auth:          &auth,
-		Schema:        &schema,
-		Table:         &table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
+func (params DeleteParams) Details() map[string]string {
+	return map[string]string{
+		"table": params.Table,
 	}
+}
 
-	tx, err := feature.server.Begin(ctx, auth, schema)
-	if err != nil {
-		return err
-	}
+type DeleteOperationHandler struct{}
 
-	err = feature.server.Emit(AfterBeginOperationEvent{
-		OperationName: DeleteOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
+func (DeleteOperationHandler) Name() string {
+	return "Delete"
+}
 
-	_, err = tx.Exec(
+func (op DeleteOperationHandler) Execute(
+	ctx prestress.OperationContext,
+	params DeleteParams,
+) (res prestress.EmptyOperationResult, err error) {
+	_, err = ctx.Tx.Exec(
 		ctx,
 		fmt.Sprintf(
 			"DELETE FROM %s AS t %s",
-			pgx.Identifier{schema, table}.Sanitize(),
-			where.String("t", 1),
+			pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
+			params.Where.String("t", 1),
 		),
-		where.Values()...,
+		params.Where.Values()...,
 	)
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	err = feature.server.Emit(BeforeCommitOperationEvent{
-		OperationName: DeleteOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = feature.server.Emit(AfterCommitOperationEvent{
-		OperationName: DeleteOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }
 
-func (feature Crud) handleDelete(
+func (op DeleteOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
+	handle func(DeleteParams) (
+		prestress.EmptyOperationResult,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
-	schema := request.PathValue("schema")
 	table := request.PathValue("table")
 	query := request.URL.Query()
-
 	where := ParseWhere(query)
 
-	auth := feature.server.Authenticate(writer, request)
-	if auth == nil {
+	params := DeleteParams{
+		Table: table,
+		Where: where,
+	}
+	_, ctx, err := handle(params)
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
-	err = feature.Delete(
-		request.Context(),
-		*auth,
-		schema,
-		table,
-		where,
-	)
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
 	writer.WriteHeader(204)
+}
+
+type DeleteOperation struct {
+	*prestress.Operation[
+		DeleteParams,
+		prestress.EmptyOperationResult,
+	]
+}
+
+func NewDeleteOperation(begin *prestress.BeginOperation) *DeleteOperation {
+	return &DeleteOperation{
+		prestress.NewOperation(
+			new(DeleteOperationHandler),
+			begin,
+		),
+	}
 }

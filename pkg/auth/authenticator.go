@@ -1,4 +1,4 @@
-package prestress
+package auth
 
 import (
 	"fmt"
@@ -28,18 +28,5 @@ func (result AuthenticationResult) Details() map[string]string {
 }
 
 type Authenticator interface {
-	// If user can be authenticated from the request, pointer to result is returned.
-	// Otherwise response is written and nil is returned.
-	Authenticate(http.ResponseWriter, *http.Request) *AuthenticationResult
-}
-
-func (server Server) Authenticate(writer http.ResponseWriter, request *http.Request) *AuthenticationResult {
-	if server.Authenticator == nil {
-		// No authenticator, everyone is anonymous
-		return &AuthenticationResult{
-			Role: AnonymousRole,
-		}
-	}
-
-	return server.Authenticator.Authenticate(writer, request)
+	Authenticate(*http.Request) (*AuthenticationResult, error)
 }

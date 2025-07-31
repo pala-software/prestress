@@ -3,18 +3,20 @@ test:
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-  image: golang:1.23.3-alpine
+  image: golang:1.24-alpine
   services:
-    - postgres:16.5
+    - postgres:17
   script:
-    - apk add postgresql16-client
-    - psql $PRESTRESS_TEST_DB < seed.sql
+    - apk add postgresql17-client
+    - psql $PRESTRESS_TEST_DB < init.sql
     - go get github.com/boumenot/gocover-cobertura
     - go test ./pkg/... -coverprofile=coverage.txt -covermode count
     - go tool cover -func coverage.txt
     - go run github.com/boumenot/gocover-cobertura < coverage.txt > coverage.xml
     - sed -i "s=<source>.*</source>=<source>./</source>=g" coverage.xml
   variables:
+    POSTGRES_DB: postgres
+    POSTGRES_USER: postgres
     POSTGRES_PASSWORD: postgres
     PRESTRESS_TEST_DB: postgres://postgres:postgres@postgres/postgres
   coverage: '/total:\s+\(statements\)\s+\d+.\d+%/'

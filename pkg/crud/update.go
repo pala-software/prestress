@@ -1,7 +1,6 @@
 package crud
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,54 +12,36 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-const UpdateOperation = "Update"
+type UpdateParams struct {
+	Table string
+	Where Where
+	Data  map[string]any
+}
 
-func (feature Crud) Update(
-	ctx context.Context,
-	auth prestress.AuthenticationResult,
-	schema string,
-	table string,
-	where Where,
-	data map[string]any,
-) error {
-	var err error
+func (params UpdateParams) Details() map[string]string {
+	return map[string]string{
+		"table": params.Table,
+	}
+}
 
-	if len(data) == 0 {
-		return nil
+type UpdateOperationHandler struct{}
+
+func (UpdateOperationHandler) Name() string {
+	return "Update"
+}
+
+func (op UpdateOperationHandler) Execute(
+	ctx prestress.OperationContext,
+	params UpdateParams,
+) (res prestress.EmptyOperationResult, err error) {
+	if len(params.Data) == 0 {
+		return
 	}
 
-	err = feature.server.Emit(BeforeBeginOperationEvent{
-		OperationName: UpdateOperation,
-		Auth:          &auth,
-		Schema:        &schema,
-		Table:         &table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
-
-	tx, err := feature.server.Begin(ctx, auth, schema)
-	if err != nil {
-		return err
-	}
-
-	err = feature.server.Emit(AfterBeginOperationEvent{
-		OperationName: UpdateOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
-
-	patch := make([]string, 0, len(data))
-	values := make([]any, 0, len(patch)+len(where))
+	patch := make([]string, 0, len(params.Data))
+	values := make([]any, 0, len(patch)+len(params.Where))
 	n := 1
-	for column, value := range data {
+	for column, value := range params.Data {
 		patch = append(
 			patch,
 			fmt.Sprintf(
@@ -72,62 +53,32 @@ func (feature Crud) Update(
 		values = append(values, value)
 		n++
 	}
-	values = append(values, where.Values()...)
+	values = append(values, params.Where.Values()...)
 
-	_, err = tx.Exec(
+	_, err = ctx.Tx.Exec(
 		ctx,
 		fmt.Sprintf(
 			"UPDATE %s AS t SET %s %s",
-			pgx.Identifier{schema, table}.Sanitize(),
+			pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
 			strings.Join(patch, ", "),
-			where.String("t", len(patch)+1),
+			params.Where.String("t", len(patch)+1),
 		),
 		values...,
 	)
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	err = feature.server.Emit(BeforeCommitOperationEvent{
-		OperationName: UpdateOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Transaction:   tx,
-		Context:       ctx,
-	})
-	if err != nil {
-		tx.Rollback(ctx)
-		return err
-	}
-
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-
-	err = feature.server.Emit(AfterCommitOperationEvent{
-		OperationName: UpdateOperation,
-		Auth:          auth,
-		Schema:        schema,
-		Table:         table,
-		Context:       ctx,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return
 }
 
-func (feature Crud) handleUpdate(
+func (op UpdateOperationHandler) Handle(
 	writer http.ResponseWriter,
 	request *http.Request,
+	handle func(UpdateParams) (
+		prestress.EmptyOperationResult,
+		prestress.OperationContext,
+		error,
+	),
 ) {
 	var err error
 
-	schema := request.PathValue("schema")
 	table := request.PathValue("table")
 	query := request.URL.Query()
 
@@ -152,24 +103,38 @@ func (feature Crud) handleUpdate(
 		writer.WriteHeader(400)
 		return
 	}
-
-	auth := feature.server.Authenticate(writer, request)
-	if auth == nil {
+	params := UpdateParams{
+		Table: table,
+		Where: where,
+		Data:  data,
+	}
+	_, ctx, err := handle(params)
+	if err != nil {
+		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
-	err = feature.Update(
-		request.Context(),
-		*auth,
-		schema,
-		table,
-		where,
-		data,
-	)
+	err = ctx.Commit()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
 		return
 	}
 
 	writer.WriteHeader(204)
+}
+
+type UpdateOperation struct {
+	*prestress.Operation[
+		UpdateParams,
+		prestress.EmptyOperationResult,
+	]
+}
+
+func NewUpdateOperation(begin *prestress.BeginOperation) *UpdateOperation {
+	return &UpdateOperation{
+		prestress.NewOperation(
+			new(UpdateOperationHandler),
+			begin,
+		),
+	}
 }
