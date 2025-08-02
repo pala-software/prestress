@@ -44,25 +44,11 @@ func (mig *Migrator) Provider() any {
 
 func (mig *Migrator) Invoker() any {
 	return func() (err error) {
-		err = mig.RegisterMigrations(mig)
+		err = RegisterPrestressMigrations(mig)
 		if err != nil {
 			return
 		}
 
 		return
 	}
-}
-
-func (Migrator) RegisterMigrations(mig *Migrator) (err error) {
-	err = RegisterPrestressMigrations(mig)
-	if err != nil {
-		return
-	}
-
-	err = RegisterMigrationsFromEnv(mig)
-	if err != nil {
-		return
-	}
-
-	return
 }
