@@ -52,6 +52,7 @@ func HandleDatabaseError(writer http.ResponseWriter, err error) {
 		case err.Code == "P0001":
 			writer.WriteHeader(400)
 			writer.Write([]byte(err.Message))
+			return
 		}
 	}
 
