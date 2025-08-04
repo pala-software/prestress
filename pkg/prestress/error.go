@@ -8,6 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+type HttpError interface {
+	error
+	Message() string
+	Status() int
+}
+
 func HandleDatabaseError(writer http.ResponseWriter, err error) {
 	switch err {
 	case pgx.ErrNoRows:
@@ -54,6 +60,11 @@ func HandleDatabaseError(writer http.ResponseWriter, err error) {
 			writer.Write([]byte(err.Message))
 			return
 		}
+	}
+
+	if err, ok := err.(HttpError); ok {
+		writer.WriteHeader(err.Status())
+		writer.Write([]byte(err.Message()))
 	}
 
 	fmt.Println(err)
