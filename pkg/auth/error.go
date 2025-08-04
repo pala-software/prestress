@@ -1,6 +1,20 @@
 package auth
 
-import "errors"
+type authenticationError struct {
+	message string
+}
 
-var ErrAuthenticationRequired = errors.New("authentication required")
-var ErrAuthenticationFailed = errors.New("authentication failed")
+func (err authenticationError) Error() string {
+	return err.message
+}
+
+func (err authenticationError) Message() string {
+	return err.message
+}
+
+func (authenticationError) Status() int {
+	return 401
+}
+
+var ErrAuthenticationRequired = &authenticationError{message: "authentication required"}
+var ErrAuthenticationFailed = &authenticationError{message: "authentication failed"}
