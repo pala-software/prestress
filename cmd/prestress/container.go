@@ -43,11 +43,6 @@ func container() (c *dig.Container, err error) {
 		}
 	}
 
-	// Assign authenticator to use (provide the interface).
-	c.Provide(func(authenticator *oauth.OAuth) auth.Authenticator {
-		return authenticator
-	})
-
 	for _, feature := range features {
 		err = c.Invoke(feature.Invoker())
 		if err != nil {
