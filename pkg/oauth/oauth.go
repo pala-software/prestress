@@ -3,6 +3,8 @@ package oauth
 import (
 	"net/url"
 	"os"
+
+	"gitlab.com/pala-software/prestress/pkg/auth"
 )
 
 type OAuth struct {
@@ -47,8 +49,9 @@ func OAuthFromEnv() *OAuth {
 }
 
 func (feature *OAuth) Provider() any {
-	return func() (self *OAuth) {
+	return func() (self *OAuth, authenticator auth.Authenticator) {
 		self = feature
+		authenticator = feature
 		return
 	}
 }
