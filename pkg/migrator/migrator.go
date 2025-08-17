@@ -8,7 +8,7 @@ import (
 )
 
 type Migrator struct {
-	Targets prestress.Registry[MigrationTarget]
+	Targets prestress.Registry[Migratable]
 }
 
 func MigratorFromEnv() *Migrator {
