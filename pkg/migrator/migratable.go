@@ -1,5 +1,10 @@
 package migrator
 
+import "github.com/jackc/pgx/v5/pgxpool"
+
 type Migratable interface {
-	RegisterMigrations(*Migrator) error
+	Migrate(
+		conn *pgxpool.Conn,
+		forceRunAll bool,
+	) error
 }
