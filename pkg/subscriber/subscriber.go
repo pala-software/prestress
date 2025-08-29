@@ -24,7 +24,9 @@ type Subscriber struct {
 // Construct Subscribe Feature and read configuration from environment
 // variables.
 func SubscriberFromEnv() *Subscriber {
-	feature := &Subscriber{}
+	feature := &Subscriber{
+		CrudRootPath: "/data",
+	}
 	// No configuration at this time
 	return feature
 }
