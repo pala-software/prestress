@@ -14,7 +14,9 @@ type Crud struct {
 
 // Construct CRUD Feature and read configuration from environment variables.
 func CrudFromEnv() *Crud {
-	feature := Crud{}
+	feature := Crud{
+		RootPath: "/data",
+	}
 	// No configuration at this time
 	return &feature
 }
