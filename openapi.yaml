@@ -12,7 +12,7 @@ servers:
         description: URL to your Prestress server
 
 paths:
-  /{schema}/{table}:
+  /data/{schema}/{table}:
     get:
       summary: Find
       description: Find and retrieve rows from a table
@@ -262,7 +262,7 @@ paths:
               example: |
                 relation "public.example" does not exist
 
-  /{schema}/{table}/subscription:
+  /data/{schema}/{table}/subscription:
     get:
       summary: Subscribe
       description: Subscribe to changes to table
