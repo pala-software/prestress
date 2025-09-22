@@ -117,6 +117,14 @@ func (op SubscribeOperationHandler) Handle(
 	writer.Header().Set("Connection", "keep-alive")
 	responseController := http.NewResponseController(writer)
 
+	// Send empty comment to make sure connection is open
+	writer.Write([]byte(":\n\n"))
+	err = responseController.Flush()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	for {
 		select {
 		case <-request.Context().Done():
