@@ -34,6 +34,7 @@ func SubscriberFromEnv() *Subscriber {
 func (feature *Subscriber) Provider() any {
 	return func(
 		pool *pgxpool.Pool,
+		lifecycle *prestress.Lifecycle,
 		begin *prestress.BeginOperation,
 		create *crud.CreateOperation,
 		update *crud.UpdateOperation,
@@ -44,7 +45,9 @@ func (feature *Subscriber) Provider() any {
 		subscribe *SubscribeOperation,
 	) {
 		self = feature
-		subscribe = NewSubscribeOperation(pool,
+		subscribe = NewSubscribeOperation(
+			pool,
+			lifecycle,
 			begin,
 			create,
 			update,
