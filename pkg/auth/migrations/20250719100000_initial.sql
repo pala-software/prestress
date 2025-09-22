@@ -7,7 +7,7 @@ AS $$
   BEGIN
     IF EXISTS (
       SELECT
-      FROM information_schema.tables 
+      FROM information_schema.tables
       WHERE table_type = 'LOCAL TEMPORARY'
       AND table_name = 'prestress_auth'
     ) THEN
@@ -27,7 +27,7 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
   BEGIN
-    CREATE TEMPORARY TABLE pg_temp.prestress_auth
+    CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_auth
       (key TEXT PRIMARY KEY, value TEXT)
     ON COMMIT DROP;
 
@@ -55,7 +55,7 @@ AS $$
   BEGIN
     IF EXISTS (
       SELECT
-      FROM information_schema.tables 
+      FROM information_schema.tables
       WHERE table_type = 'LOCAL TEMPORARY'
       AND table_name = 'prestress_auth'
     ) THEN

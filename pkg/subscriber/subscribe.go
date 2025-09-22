@@ -23,7 +23,8 @@ func (params SubscribeParams) Details() map[string]string {
 }
 
 type SubscribeOperationHandler struct {
-	pool          *pgxpool.Pool
+	ctx           context.Context
+	conn          *pgxpool.Conn
 	subscriptions map[int]*Subscription
 }
 
@@ -51,16 +52,9 @@ func (op *SubscribeOperationHandler) Execute(
 		return
 	}
 
-	ctx2, cancel := context.WithCancel(ctx)
-	conn, err := op.pool.Acquire(ctx2)
-	if err != nil {
-		cancel()
-		return
-	}
-
 	var subId int
-	err = conn.QueryRow(
-		ctx,
+	err = op.conn.QueryRow(
+		op.ctx,
 		"SELECT prestress.setup_subscription($1, $2, $3, $4)",
 		authRes.Role,
 		ctx.Schema,
@@ -68,7 +62,6 @@ func (op *SubscribeOperationHandler) Execute(
 		encodedVariables,
 	).Scan(&subId)
 	if err != nil {
-		cancel()
 		return
 	}
 
@@ -78,10 +71,8 @@ func (op *SubscribeOperationHandler) Execute(
 	op.subscriptions[subId] = sub
 
 	context.AfterFunc(ctx, func() {
-		defer cancel()
-
-		_, err := conn.Exec(
-			context.Background(),
+		_, err := op.conn.Exec(
+			op.ctx,
 			"SELECT prestress.teardown_subscription($1)",
 			subId,
 		)
@@ -168,15 +159,27 @@ type SubscribeOperation struct {
 
 func NewSubscribeOperation(
 	pool *pgxpool.Pool,
+	lifecycle *prestress.Lifecycle,
 	begin *prestress.BeginOperation,
 	create *crud.CreateOperation,
 	update *crud.UpdateOperation,
 	delete *crud.DeleteOperation,
 ) *SubscribeOperation {
 	handler := &SubscribeOperationHandler{
-		pool:          pool,
 		subscriptions: make(map[int]*Subscription),
 	}
+
+	var cancel context.CancelFunc
+	handler.ctx, cancel = context.WithCancel(context.Background())
+	lifecycle.Start.Register(func() (err error) {
+		handler.conn, err = pool.Acquire(handler.ctx)
+		return
+	})
+	lifecycle.Shutdown.Register(func() (err error) {
+		defer cancel()
+		handler.conn.Release()
+		return
+	})
 
 	create.Before().Register(func(
 		initCtx prestress.OperationContext,
