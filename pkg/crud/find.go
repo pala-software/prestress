@@ -43,7 +43,8 @@ func (op FindOperationHandler) Execute(
 	ctx prestress.OperationContext,
 	params FindParams,
 ) (res FindResult, err error) {
-	rows, err := ctx.Tx.Query(
+	var rows pgx.Rows
+	rows, err = ctx.Tx.Query(
 		ctx,
 		fmt.Sprintf(
 			"SELECT to_json(t) FROM %s AS t %s LIMIT %d OFFSET %d",
@@ -54,6 +55,10 @@ func (op FindOperationHandler) Execute(
 		),
 		params.Where.Values()...,
 	)
+	if err != nil {
+		return
+	}
+
 	res = FindResult{rows}
 	return
 }
@@ -133,6 +138,7 @@ func (op FindOperationHandler) Handle(
 		_, err = writer.Write(encodedRow)
 		if err != nil {
 			fmt.Println(err)
+			ctx.Rollback()
 			return
 		}
 	}
@@ -140,6 +146,7 @@ func (op FindOperationHandler) Handle(
 	err = rows.Err()
 	if err != nil {
 		prestress.HandleDatabaseError(writer, err)
+		ctx.Rollback()
 		return
 	}
 
