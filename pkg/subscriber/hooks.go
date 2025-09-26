@@ -3,6 +3,7 @@ package subscriber
 import (
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
@@ -21,7 +22,8 @@ func (SubscribeOperationHandler) createChangeTable(
 func (op *SubscribeOperationHandler) collectChanges(
 	ctx prestress.OperationContext,
 ) (err error) {
-	rows, err := ctx.Tx.Query(
+	var rows pgx.Rows
+	rows, err = ctx.Tx.Query(
 		ctx,
 		`SELECT
 			subscription_id,
