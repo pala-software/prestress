@@ -27,7 +27,7 @@ RETURNS VOID
 LANGUAGE plpgsql
 AS $$
   BEGIN
-    CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_auth
+    CREATE TEMPORARY TABLE pg_temp.prestress_auth
       (key TEXT PRIMARY KEY, value TEXT)
     ON COMMIT DROP;
 
