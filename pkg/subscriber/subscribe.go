@@ -189,6 +189,7 @@ func NewSubscribeOperation(
 	handler.ctx, cancel = context.WithCancel(context.Background())
 	lifecycle.Start.Register(func() (err error) {
 		handler.conn, err = pool.Acquire(handler.ctx)
+		handler.mutex = &sync.Mutex{}
 		return
 	})
 	lifecycle.Shutdown.Register(func() (err error) {
