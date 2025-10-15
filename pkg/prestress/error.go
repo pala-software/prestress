@@ -65,6 +65,7 @@ func HandleDatabaseError(writer http.ResponseWriter, err error) {
 	if err, ok := err.(HttpError); ok {
 		writer.WriteHeader(err.Status())
 		writer.Write([]byte(err.Message()))
+		return
 	}
 
 	fmt.Println(err)
