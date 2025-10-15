@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/auth"
@@ -25,6 +26,7 @@ func (params SubscribeParams) Details() map[string]string {
 type SubscribeOperationHandler struct {
 	ctx           context.Context
 	conn          *pgxpool.Conn
+	mutex         *sync.Mutex
 	subscriptions map[int]*Subscription
 }
 
@@ -52,6 +54,9 @@ func (op *SubscribeOperationHandler) Execute(
 		return
 	}
 
+	op.mutex.Lock()
+	defer op.mutex.Unlock()
+
 	var subId int
 	err = op.conn.QueryRow(
 		op.ctx,
@@ -71,6 +76,9 @@ func (op *SubscribeOperationHandler) Execute(
 	op.subscriptions[subId] = sub
 
 	context.AfterFunc(ctx, func() {
+		op.mutex.Lock()
+		defer op.mutex.Unlock()
+
 		_, err := op.conn.Exec(
 			op.ctx,
 			"SELECT prestress.teardown_subscription($1)",
@@ -181,6 +189,7 @@ func NewSubscribeOperation(
 	handler.ctx, cancel = context.WithCancel(context.Background())
 	lifecycle.Start.Register(func() (err error) {
 		handler.conn, err = pool.Acquire(handler.ctx)
+		handler.mutex = &sync.Mutex{}
 		return
 	})
 	lifecycle.Shutdown.Register(func() (err error) {
