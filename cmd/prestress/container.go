@@ -8,6 +8,7 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/migrator"
 	"gitlab.com/pala-software/prestress/pkg/oauth"
 	"gitlab.com/pala-software/prestress/pkg/otel"
+	"gitlab.com/pala-software/prestress/pkg/param"
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 	"gitlab.com/pala-software/prestress/pkg/subscriber"
 	"go.uber.org/dig"
@@ -20,6 +21,7 @@ var features = []prestress.Feature{
 	subscriber.SubscriberFromEnv(),
 	auth.AuthenticationFromEnv(),
 	oauth.OAuthFromEnv(),
+	param.ParamFromEnv(),
 	otel.OTelFromEnv(),
 }
 
