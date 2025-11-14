@@ -12,9 +12,9 @@ func (SubscribeOperationHandler) createChangeTable(
 ) (err error) {
 	_, err = ctx.Tx.Exec(
 		ctx,
-		`CREATE TEMPORARY TABLE IF NOT EXISTS pg_temp.prestress_change
-				OF prestress.change
-				ON COMMIT DELETE ROWS`,
+		`CREATE TEMPORARY TABLE pg_temp.prestress_change
+			OF prestress.change
+			ON COMMIT DROP`,
 	)
 	return
 }
