@@ -228,7 +228,25 @@ AS $$
   END;
 $$;
 
-CREATE FUNCTION prestress.drop_state(subscription_id BIGINT)
+CREATE FUNCTION prestress.has_state(
+  subscription_id BIGINT,
+  table_schema NAME,
+  table_name NAME
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+RETURN EXISTS (
+  SELECT
+  FROM information_schema.tables
+  WHERE table_type = 'LOCAL TEMPORARY'
+  AND table_name = 'prestress_state_' || subscription_id
+);
+
+CREATE FUNCTION prestress.drop_state(
+  subscription_id BIGINT,
+  table_schema NAME,
+  table_name NAME
+)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -337,23 +355,20 @@ AS $$
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
-        DECLARE
-          original_authorization jsonb;
         BEGIN
-          SELECT prestress.dump_authorization() INTO original_authorization;
-          IF original_authorization IS NOT NULL THEN
-            PERFORM prestress.end_authorized();
+          IF prestress.has_state(%L, %L, %L) THEN
+            RETURN NULL;
           END IF;
           PERFORM prestress.begin_authorized(%L);
           PERFORM prestress.record_state(%L, %L, %L);
           PERFORM prestress.end_authorized();
-          IF original_authorization IS NOT NULL THEN
-            PERFORM prestress.begin_authorized(original_authorization);
-          END IF;
           RETURN NULL;
         END;
       $s$;',
       'prestress_before_' || subscription_id,
+      subscription_id,
+      table_schema,
+      table_name,
       authorization_variables,
       subscription_id,
       table_schema,
@@ -366,32 +381,74 @@ AS $$
       LANGUAGE plpgsql
       SECURITY DEFINER
       AS $s$
+        BEGIN
+          IF NOT prestress.has_state(%L, %L, %L) THEN
+            RETURN NULL;
+          END IF;
+          PERFORM prestress.begin_authorized(%L);
+          PERFORM prestress.record_change(%L, %L, %L);
+          PERFORM prestress.drop_state(%L, %L, %L);
+          PERFORM prestress.end_authorized();
+          RETURN NULL;
+        END;
+      $s$;',
+      'prestress_after_' || subscription_id,
+      subscription_id,
+      table_schema,
+      table_name,
+      authorization_variables,
+      subscription_id,
+      table_schema,
+      table_name,
+      subscription_id,
+      table_schema,
+      table_name
+    );
+
+    EXECUTE format('SET LOCAL ROLE TO %I', original_role);
+
+    EXECUTE format(
+      'CREATE FUNCTION pg_temp.%I()
+      RETURNS TRIGGER
+      LANGUAGE plpgsql
+      SECURITY INVOKER
+      AS $s$
         DECLARE
           original_authorization jsonb;
         BEGIN
           SELECT prestress.dump_authorization() INTO original_authorization;
+          CREATE TEMPORARY TABLE pg_temp.%I ON COMMIT DROP AS SELECT original_authorization AS value;
           IF original_authorization IS NOT NULL THEN
             PERFORM prestress.end_authorized();
           END IF;
-          PERFORM prestress.begin_authorized(%L);
-          PERFORM prestress.record_change(%L, %L, %L);
-          PERFORM prestress.drop_state(%L);
-          PERFORM prestress.end_authorized();
+          RETURN NULL;
+        END;
+      $s$;',
+      'prestress_begin_' || subscription_id,
+      'prestress_auth_' || subscription_id
+    );
+
+    EXECUTE format(
+      'CREATE FUNCTION pg_temp.%I()
+      RETURNS TRIGGER
+      LANGUAGE plpgsql
+      SECURITY INVOKER
+      AS $s$
+        DECLARE
+          original_authorization jsonb;
+        BEGIN
+          SELECT value INTO original_authorization FROM pg_temp.%I;
+          DROP TABLE pg_temp.%I;
           IF original_authorization IS NOT NULL THEN
             PERFORM prestress.begin_authorized(original_authorization);
           END IF;
           RETURN NULL;
         END;
       $s$;',
-      'prestress_after_' || subscription_id,
-      authorization_variables,
-      subscription_id,
-      table_schema,
-      table_name,
-      subscription_id
+      'prestress_end_' || subscription_id,
+      'prestress_auth_' || subscription_id,
+      'prestress_auth_' || subscription_id
     );
-
-    EXECUTE format('SET LOCAL ROLE TO %I', original_role);
 
     FOR target_schema, target_table IN
       SELECT related_table.table_schema, related_table.table_name
@@ -403,7 +460,18 @@ AS $$
         BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
         FOR EACH STATEMENT
         EXECUTE FUNCTION pg_temp.%I();',
-        'prestress_before_' || subscription_id || '_' || trigger_id,
+        'prestress_before_1_' || subscription_id || '_' || trigger_id,
+        target_schema,
+        target_table,
+        'prestress_begin_' || subscription_id
+      );
+
+      EXECUTE format(
+        'CREATE TRIGGER %I
+        BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION pg_temp.%I();',
+        'prestress_before_2_' || subscription_id || '_' || trigger_id,
         target_schema,
         target_table,
         'prestress_before_' || subscription_id
@@ -411,13 +479,46 @@ AS $$
 
       EXECUTE format(
         'CREATE TRIGGER %I
+        BEFORE INSERT OR UPDATE OR DELETE ON %I.%I
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION pg_temp.%I();',
+        'prestress_before_3_' || subscription_id || '_' || trigger_id,
+        target_schema,
+        target_table,
+        'prestress_end_' || subscription_id
+      );
+
+      EXECUTE format(
+        'CREATE TRIGGER %I
         AFTER INSERT OR UPDATE OR DELETE ON %I.%I
         FOR EACH STATEMENT
         EXECUTE FUNCTION pg_temp.%I();',
-        'prestress_after_' || subscription_id || '_' || trigger_id,
+        'prestress_after_1_' || subscription_id || '_' || trigger_id,
+        target_schema,
+        target_table,
+        'prestress_begin_' || subscription_id
+      );
+
+      EXECUTE format(
+        'CREATE TRIGGER %I
+        AFTER INSERT OR UPDATE OR DELETE ON %I.%I
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION pg_temp.%I();',
+        'prestress_after_2_' || subscription_id || '_' || trigger_id,
         target_schema,
         target_table,
         'prestress_after_' || subscription_id
+      );
+
+      EXECUTE format(
+        'CREATE TRIGGER %I
+        AFTER INSERT OR UPDATE OR DELETE ON %I.%I
+        FOR EACH STATEMENT
+        EXECUTE FUNCTION pg_temp.%I();',
+        'prestress_after_3_' || subscription_id || '_' || trigger_id,
+        target_schema,
+        target_table,
+        'prestress_end_' || subscription_id
       );
 
       SELECT trigger_id + 1 INTO trigger_id;
@@ -453,6 +554,7 @@ GRANT EXECUTE ON FUNCTION prestress.extract_change(
   BIGINT, NAME, NAME, prestress.operation, NAME[]
 )
 TO public;
+GRANT EXECUTE ON FUNCTION prestress.has_state TO public;
 GRANT EXECUTE ON FUNCTION prestress.record_state TO public;
 GRANT EXECUTE ON FUNCTION prestress.drop_state TO public;
 GRANT EXECUTE ON FUNCTION prestress.record_change TO public;

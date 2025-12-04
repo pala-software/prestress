@@ -16,6 +16,18 @@ func (SubscribeOperationHandler) createChangeTable(
 			OF prestress.change
 			ON COMMIT DROP`,
 	)
+	if err != nil {
+		return
+	}
+
+	_, err = ctx.Tx.Exec(
+		ctx,
+		`GRANT INSERT ON TABLE pg_temp.prestress_change TO public`,
+	)
+	if err != nil {
+		return
+	}
+
 	return
 }
 
