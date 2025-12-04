@@ -59,7 +59,7 @@ AS $$
       WHERE table_type = 'LOCAL TEMPORARY'
       AND table_name = 'prestress_auth'
     ) THEN
-      SELECT jsonb_object(array_agg(t.key), array_agg(t.value))
+      SELECT COALESCE(jsonb_object(array_agg(t.key), array_agg(t.value)), '{}')
         FROM pg_temp.prestress_auth AS t
         INTO variables;
     END IF;
