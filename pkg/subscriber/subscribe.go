@@ -54,13 +54,11 @@ func (op *SubscribeOperationHandler) Execute(
 		return
 	}
 
-	tx, err := op.conn.Begin(op.ctx)
-	if err != nil {
-		return
-	}
+	op.mutex.Lock()
+	defer op.mutex.Unlock()
 
 	var subId int
-	err = tx.QueryRow(
+	err = op.conn.QueryRow(
 		op.ctx,
 		"SELECT prestress.setup_subscription($1, $2, $3, $4)",
 		authRes.Role,
@@ -72,22 +70,16 @@ func (op *SubscribeOperationHandler) Execute(
 		return
 	}
 
-	if err = tx.Commit(op.ctx); err != nil {
-		return
-	}
-
 	sub = &Subscription{
 		Change: make(chan Change),
 	}
 	op.subscriptions[subId] = sub
 
 	context.AfterFunc(ctx, func() {
-		tx, err := op.conn.Begin(op.ctx)
-		if err != nil {
-			return
-		}
+		op.mutex.Lock()
+		defer op.mutex.Unlock()
 
-		_, err = tx.Exec(
+		_, err := op.conn.Exec(
 			op.ctx,
 			"SELECT prestress.teardown_subscription($1)",
 			subId,
@@ -95,11 +87,6 @@ func (op *SubscribeOperationHandler) Execute(
 		if err != nil {
 			fmt.Println(err)
 		}
-
-		if err := tx.Commit(op.ctx); err != nil {
-			fmt.Println(err)
-		}
-
 		delete(op.subscriptions, subId)
 	})
 
