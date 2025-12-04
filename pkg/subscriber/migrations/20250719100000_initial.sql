@@ -335,6 +335,7 @@ AS $$
       'CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
       LANGUAGE plpgsql
+      SECURITY DEFINER
       AS $s$
         DECLARE
           original_authorization jsonb;
@@ -363,6 +364,7 @@ AS $$
       'CREATE FUNCTION pg_temp.%I()
       RETURNS TRIGGER
       LANGUAGE plpgsql
+      SECURITY DEFINER
       AS $s$
         DECLARE
           original_authorization jsonb;
