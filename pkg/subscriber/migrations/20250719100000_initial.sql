@@ -541,6 +541,14 @@ AS $$
       'DROP FUNCTION pg_temp.%I() CASCADE;',
       'prestress_after_' || id
     );
+    EXECUTE format(
+      'DROP FUNCTION pg_temp.%I() CASCADE;',
+      'prestress_begin_' || id
+    );
+    EXECUTE format(
+      'DROP FUNCTION pg_temp.%I() CASCADE;',
+      'prestress_end_' || id
+    );
   END;
 $$;
 
