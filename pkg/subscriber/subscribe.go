@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"gitlab.com/pala-software/prestress/pkg/auth"
 	"gitlab.com/pala-software/prestress/pkg/crud"
@@ -50,6 +51,18 @@ func (op *SubscribeOperationHandler) Execute(
 	}
 
 	encodedVariables, err := json.Marshal(variables)
+	if err != nil {
+		return
+	}
+
+	// Invoke permission check
+	_, err = ctx.Tx.Exec(
+		ctx,
+		fmt.Sprintf(
+			"SELECT FROM %s LIMIT 0",
+			pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
+		),
+	)
 	if err != nil {
 		return
 	}
