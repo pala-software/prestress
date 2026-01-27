@@ -363,6 +363,10 @@ AS $$
           PERFORM prestress.record_state(%L, %L, %L);
           PERFORM prestress.end_authorized();
           RETURN NULL;
+        EXCEPTION
+          WHEN insufficient_privilege THEN
+            RAISE WARNING ''caught insufficient_privilege in prestress_before_x trigger function'';
+            RETURN NULL;
         END;
       $s$;',
       'prestress_before_' || subscription_id,
@@ -390,6 +394,10 @@ AS $$
           PERFORM prestress.drop_state(%L, %L, %L);
           PERFORM prestress.end_authorized();
           RETURN NULL;
+        EXCEPTION
+          WHEN insufficient_privilege THEN
+            RAISE WARNING ''caught insufficient_privilege in prestress_after_x trigger function'';
+            RETURN NULL;
         END;
       $s$;',
       'prestress_after_' || subscription_id,
