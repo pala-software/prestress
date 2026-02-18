@@ -136,6 +136,7 @@ func (op SubscribeOperationHandler) Handle(
 	writer.Header().Set("Content-Type", "text/event-stream")
 	writer.Header().Set("Cache-Control", "no-cache")
 	writer.Header().Set("Connection", "keep-alive")
+	writer.Header().Set("X-Accel-Buffering", "no")
 	responseController := http.NewResponseController(writer)
 
 	// Send empty comment to make sure connection is open
