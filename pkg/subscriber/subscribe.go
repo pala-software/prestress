@@ -84,7 +84,7 @@ func (op *SubscribeOperationHandler) Execute(
 	}
 
 	sub = &Subscription{
-		Change: make(chan Change),
+		Change: make(chan Change, 1),
 	}
 	op.subscriptions[subId] = sub
 
