@@ -208,7 +208,9 @@ func NewSubscribeOperation(
 	})
 	lifecycle.Shutdown.Register(func() (err error) {
 		defer cancel()
-		handler.conn.Release()
+		if handler.conn != nil {
+			handler.conn.Release()
+		}
 		return
 	})
 
