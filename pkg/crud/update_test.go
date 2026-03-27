@@ -21,7 +21,7 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 		newValue := "1-2"
 
 		table := "update"
-		where := crud.Where{"value": oldValue}
+		where := crud.Where{"value": crud.Equals{oldValue}}
 		data := map[string]any{"value": newValue}
 
 		err = expectItems(ctx, table, where, []string{oldValue})
@@ -83,7 +83,7 @@ func TestUpdate(t *testing.T) {
 		newValue := "2-2"
 
 		table := "update"
-		where := crud.Where{"value": oldValue}
+		where := crud.Where{"value": crud.Equals{oldValue}}
 		data := map[string]any{"value": newValue}
 
 		err = expectItems(ctx, table, where, []string{oldValue})

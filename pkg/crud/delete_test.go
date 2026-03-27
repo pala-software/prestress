@@ -18,7 +18,7 @@ func TestDeleteWithCancelledContext(t *testing.T) {
 		}
 
 		table := "delete"
-		where := crud.Where{"value": "1"}
+		where := crud.Where{"value": crud.Equals{"1"}}
 
 		err = expectItems(ctx, table, where, []string{"1"})
 		if err != nil {
@@ -79,7 +79,7 @@ func TestDelete(t *testing.T) {
 		}
 
 		table := "delete"
-		where := crud.Where{"value": "2"}
+		where := crud.Where{"value": crud.Equals{"2"}}
 
 		err = expectItems(ctx, table, where, []string{"2"})
 		if err != nil {

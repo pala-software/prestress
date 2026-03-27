@@ -79,7 +79,7 @@ func TestFindWithFilter(t *testing.T) {
 		err = expectItems(
 			ctx,
 			"find",
-			crud.Where{"value": "1"},
+			crud.Where{"value": crud.Equals{"1"}},
 			[]string{"1"},
 		)
 		if err != nil {
