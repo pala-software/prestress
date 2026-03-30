@@ -51,7 +51,7 @@ func TestCreateWithCancelledContext(t *testing.T) {
 			checkCtx,
 			table,
 			crud.Where{"value": crud.Equals{"withCancelledContext"}},
-			[]string{},
+			[]*string{},
 		)
 		if err != nil {
 			checkCtx.Rollback()
@@ -93,7 +93,7 @@ func TestCreate(t *testing.T) {
 			ctx,
 			table,
 			crud.Where{"value": crud.Equals{"3"}},
-			[]string{"3"},
+			[]*string{strPtr("3")},
 		)
 		if err != nil {
 			ctx.Rollback()

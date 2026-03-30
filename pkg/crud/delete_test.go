@@ -20,7 +20,7 @@ func TestDeleteWithCancelledContext(t *testing.T) {
 		table := "delete"
 		where := crud.Where{"value": crud.Equals{"1"}}
 
-		err = expectItems(ctx, table, where, []string{"1"})
+		err = expectItems(ctx, table, where, []*string{strPtr("1")})
 		if err != nil {
 			ctx.Rollback()
 			cancel()
@@ -52,7 +52,7 @@ func TestDeleteWithCancelledContext(t *testing.T) {
 			return
 		}
 
-		err = expectItems(checkCtx, table, where, []string{"1"})
+		err = expectItems(checkCtx, table, where, []*string{strPtr("1")})
 		if err != nil {
 			checkCtx.Rollback()
 			return
@@ -71,7 +71,7 @@ func TestDeleteWithCancelledContext(t *testing.T) {
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestDeleteWithEquals(t *testing.T) {
 	err := container.Invoke(func(delete *crud.DeleteOperation) (err error) {
 		ctx, err := begin(context.Background())
 		if err != nil {
@@ -81,7 +81,7 @@ func TestDelete(t *testing.T) {
 		table := "delete"
 		where := crud.Where{"value": crud.Equals{"2"}}
 
-		err = expectItems(ctx, table, where, []string{"2"})
+		err = expectItems(ctx, table, where, []*string{strPtr("2")})
 		if err != nil {
 			ctx.Rollback()
 			return
@@ -97,7 +97,48 @@ func TestDelete(t *testing.T) {
 			return
 		}
 
-		err = expectItems(ctx, table, where, []string{})
+		err = expectItems(ctx, table, where, []*string{})
+		if err != nil {
+			ctx.Rollback()
+			return
+		}
+
+		err = ctx.Commit()
+		return
+	})
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestDeleteNull(t *testing.T) {
+	err := container.Invoke(func(delete *crud.DeleteOperation) (err error) {
+		ctx, err := begin(context.Background())
+		if err != nil {
+			return
+		}
+
+		table := "delete"
+		where := crud.Where{"value": crud.IsNull{}}
+
+		err = expectItems(ctx, table, where, []*string{nil})
+		if err != nil {
+			ctx.Rollback()
+			return
+		}
+
+		params := crud.DeleteParams{
+			Table: table,
+			Where: where,
+		}
+		_, err = delete.Execute(ctx, params)
+		if err != nil {
+			ctx.Rollback()
+			return
+		}
+
+		err = expectItems(ctx, table, where, []*string{})
 		if err != nil {
 			ctx.Rollback()
 			return
