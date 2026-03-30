@@ -21,10 +21,10 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 		newValue := "1-2"
 
 		table := "update"
-		where := crud.Where{"value": oldValue}
+		where := crud.Where{"value": crud.Equals{oldValue}}
 		data := map[string]any{"value": newValue}
 
-		err = expectItems(ctx, table, where, []string{oldValue})
+		err = expectItems(ctx, table, where, []*string{&oldValue})
 		if err != nil {
 			ctx.Rollback()
 			cancel()
@@ -57,7 +57,7 @@ func TestUpdateWithCancelledContext(t *testing.T) {
 			return
 		}
 
-		err = expectItems(checkCtx, table, where, []string{oldValue})
+		err = expectItems(checkCtx, table, where, []*string{&oldValue})
 		if err != nil {
 			checkCtx.Rollback()
 			return
@@ -83,10 +83,10 @@ func TestUpdate(t *testing.T) {
 		newValue := "2-2"
 
 		table := "update"
-		where := crud.Where{"value": oldValue}
+		where := crud.Where{"value": crud.Equals{oldValue}}
 		data := map[string]any{"value": newValue}
 
-		err = expectItems(ctx, table, where, []string{oldValue})
+		err = expectItems(ctx, table, where, []*string{&oldValue})
 		if err != nil {
 			ctx.Rollback()
 			return
@@ -103,7 +103,7 @@ func TestUpdate(t *testing.T) {
 			return
 		}
 
-		err = expectItems(ctx, table, where, []string{})
+		err = expectItems(ctx, table, where, []*string{})
 		if err != nil {
 			ctx.Rollback()
 			return

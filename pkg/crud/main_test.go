@@ -30,7 +30,7 @@ var features = []prestress.Feature{
 }
 
 type Item struct {
-	Value string `json:"value"`
+	Value *string `json:"value"`
 }
 
 func TestMain(m *testing.M) {
@@ -128,7 +128,7 @@ func expectItems(
 	ctx prestress.OperationContext,
 	table string,
 	where crud.Where,
-	expectedValues []string,
+	expectedValues []*string,
 ) (err error) {
 	var result pgx.Rows
 	err = container.Invoke(func(find *crud.FindOperation) (err error) {
@@ -159,6 +159,7 @@ func expectItems(
 				count,
 			)
 		}
+		count++
 
 		var actualItem Item
 		err = result.Scan(&actualItem)
@@ -166,15 +167,20 @@ func expectItems(
 			return
 		}
 
-		if actualItem.Value != expectedValue {
+		if actualItem.Value == nil && expectedValue == nil {
+			// Good
+			continue	
+		} else if actualItem.Value == nil {
+			return fmt.Errorf("expected value '%s', got nil", *expectedValue)
+		} else if expectedValue == nil {
+			return fmt.Errorf("expected nil, got '%s'", *actualItem.Value)
+		} else if *actualItem.Value != *expectedValue {
 			return fmt.Errorf(
 				"expected value '%s', got '%s'",
-				expectedValue,
-				actualItem.Value,
+				*expectedValue,
+				*actualItem.Value,
 			)
 		}
-
-		count++
 	}
 
 	if result.Next() {
@@ -185,4 +191,8 @@ func expectItems(
 	}
 
 	return
+}
+
+func strPtr(str string) *string {
+	return &str
 }

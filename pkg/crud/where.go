@@ -5,34 +5,97 @@ import (
 	"maps"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 )
 
-type Where map[string]string
+type Condition interface {
+	SQL(variable pgx.Identifier, paramN *int) string
+	ParamValues() []any
+}
+
+type Equals struct {
+	Value any
+}
+
+func (Equals) SQL(variable pgx.Identifier, paramN *int) string {
+	n := *paramN
+	*paramN = n+1
+
+	return fmt.Sprintf(
+		"%s = $%d",
+		variable.Sanitize(),
+		n,
+	)
+}
+
+func (condition Equals) ParamValues() []any {
+	return []any{condition.Value}
+}
+
+type IsNull struct {}
+
+func (IsNull) SQL(variable pgx.Identifier, paramN *int) string {
+	return fmt.Sprintf(
+		"%s IS NULL",
+		variable.Sanitize(),
+	)
+}
+
+func (IsNull) ParamValues() []any {
+ 	return nil 
+}
+
+type IsNotNull struct {}
+
+func (IsNotNull) SQL(variable pgx.Identifier, paramN *int) string {
+	return fmt.Sprintf(
+		"%s IS NOT NULL",
+		variable.Sanitize(),
+	)
+}
+
+func (IsNotNull) ParamValues() []any {
+ 	return nil 
+}
+
+type Where map[string]Condition
 
 func ParseWhere(query url.Values) Where {
 	where := make(Where, len(query))
 	for key, values := range query {
+		var value any
 		var found bool
-
-		key, found = strings.CutPrefix(key, "where[")
-		if !found {
-			continue
-		}
-
-		key, found = strings.CutSuffix(key, "]")
-		if !found {
-			continue
-		}
 
 		if len(values) == 0 {
 			continue
+		} else {
+			value = values[0]
+		}
+		
+		rest, found := strings.CutPrefix(key, "where[")
+		if !found {
+			continue
 		}
 
-		where[key] = values[0]
+		column, rest, found := strings.Cut(rest, "]")
+		if !found {
+			continue
+		}
+
+		switch rest {
+			case "":
+				where[column] = Equals{value} 
+			
+			case "[null]":
+				switch value {
+				case "1":
+					where[column] = &IsNull{}
+				case "0":
+					where[column] = &IsNotNull{}
+				}
+		}
 	}
 	return where
 }
@@ -43,32 +106,25 @@ func (where Where) Columns() []string {
 	return columns
 }
 
-func (where Where) String(table string, paramStart int) string {
+func (where Where) String(table string, paramN int) string {
 	if len(where) == 0 {
 		return ""
 	}
 
 	conditions := make([]string, 0, len(where))
-	n := paramStart
 	for _, column := range where.Columns() {
 		conditions = append(
 			conditions,
-			fmt.Sprintf(
-				"%s = %s",
-				pgx.Identifier{table, column}.Sanitize(),
-				"$"+strconv.Itoa(n),
-			),
+			where[column].SQL(pgx.Identifier{table, column}, &paramN),
 		)
-		n++
 	}
 	return "WHERE " + strings.Join(conditions, " AND ")
 }
 
 func (where Where) Values() []any {
-	values := make([]any, 0, len(where))
+	values := []any{}
 	for _, column := range where.Columns() {
-		value := where[column]
-		values = append(values, value)
+		values = append(values, where[column].ParamValues()...)
 	}
 	return values
 }

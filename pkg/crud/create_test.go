@@ -50,8 +50,8 @@ func TestCreateWithCancelledContext(t *testing.T) {
 		err = expectItems(
 			checkCtx,
 			table,
-			crud.Where{"value": "withCancelledContext"},
-			[]string{},
+			crud.Where{"value": crud.Equals{"withCancelledContext"}},
+			[]*string{},
 		)
 		if err != nil {
 			checkCtx.Rollback()
@@ -92,8 +92,8 @@ func TestCreate(t *testing.T) {
 		err = expectItems(
 			ctx,
 			table,
-			crud.Where{"value": "3"},
-			[]string{"3"},
+			crud.Where{"value": crud.Equals{"3"}},
+			[]*string{strPtr("3")},
 		)
 		if err != nil {
 			ctx.Rollback()

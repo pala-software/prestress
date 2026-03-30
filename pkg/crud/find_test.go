@@ -22,7 +22,7 @@ func TestFindWithCancelledContext(t *testing.T) {
 			ctx,
 			"find",
 			crud.Where{},
-			[]string{},
+			[]*string{},
 		)
 		if err != nil {
 			ctx.Rollback()
@@ -53,7 +53,7 @@ func TestFindAll(t *testing.T) {
 			ctx,
 			"find",
 			crud.Where{},
-			[]string{"1", "2"},
+			[]*string{nil, strPtr("1"), strPtr("2")},
 		)
 		if err != nil {
 			ctx.Rollback()
@@ -69,7 +69,7 @@ func TestFindAll(t *testing.T) {
 	}
 }
 
-func TestFindWithFilter(t *testing.T) {
+func TestFindWithEquals(t *testing.T) {
 	err := func() (err error) {
 		ctx, err := begin(context.Background())
 		if err != nil {
@@ -79,8 +79,62 @@ func TestFindWithFilter(t *testing.T) {
 		err = expectItems(
 			ctx,
 			"find",
-			crud.Where{"value": "1"},
-			[]string{"1"},
+			crud.Where{"value": crud.Equals{"1"}},
+			[]*string{strPtr("1")},
+		)
+		if err != nil {
+			ctx.Rollback()
+			return
+		}
+
+		err = ctx.Commit()
+		return
+	}()
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFindNull(t *testing.T) {
+	err := func() (err error) {
+		ctx, err := begin(context.Background())
+		if err != nil {
+			return
+		}
+
+		err = expectItems(
+			ctx,
+			"find",
+			crud.Where{"value": crud.IsNull{}},
+			[]*string{nil},
+		)
+		if err != nil {
+			ctx.Rollback()
+			return
+		}
+
+		err = ctx.Commit()
+		return
+	}()
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFindNotNull(t *testing.T) {
+	err := func() (err error) {
+		ctx, err := begin(context.Background())
+		if err != nil {
+			return
+		}
+
+		err = expectItems(
+			ctx,
+			"find",
+			crud.Where{"value": crud.IsNotNull{}},
+			[]*string{strPtr("1"), strPtr("2")},
 		)
 		if err != nil {
 			ctx.Rollback()
