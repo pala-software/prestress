@@ -45,10 +45,10 @@ Prestress itself.
 
    ```sh
    # Create row on document table:
-   http POST http://localhost:8080/public/document body="Hello, World!"
+   http POST http://localhost:8080/data/public/document body="Hello, World!"
 
    # Retrieve 10 rows from document table:
-   http GET http://localhost:8080/public/document?limit=10
+   http GET http://localhost:8080/data/public/document?limit=10
    ```
 
 7. To test out authentication, you can use mock identity provider which comes
@@ -71,5 +71,5 @@ Prestress itself.
    authorization header with the generated token:
 
    ```
-   http GET http://localhost:8080/public/document Authorization:"Bearer TOKEN-1"
+   http GET http://localhost:8080/data/public/document Authorization:"Bearer TOKEN-1"
    ```
