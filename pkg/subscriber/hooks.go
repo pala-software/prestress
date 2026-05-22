@@ -7,7 +7,7 @@ import (
 	"gitlab.com/pala-software/prestress/pkg/prestress"
 )
 
-func (SubscribeOperationHandler) createChangeTable(
+func (op *SubscribeOperationHandler) createChangeTable(
 	ctx prestress.OperationContext,
 ) (err error) {
 	_, err = ctx.Tx.Exec(
