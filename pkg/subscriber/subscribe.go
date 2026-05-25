@@ -55,6 +55,9 @@ func (op *SubscribeOperationHandler) Execute(
 		return
 	}
 
+	op.mutex.Lock()
+	defer op.mutex.Unlock()
+
 	// Invoke permission check
 	_, err = ctx.Tx.Exec(
 		ctx,
@@ -66,9 +69,6 @@ func (op *SubscribeOperationHandler) Execute(
 	if err != nil {
 		return
 	}
-
-	op.mutex.Lock()
-	defer op.mutex.Unlock()
 
 	var subId int
 	err = op.conn.QueryRow(
