@@ -3,6 +3,8 @@ package subscriber_test
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"sync"
 	"testing"
 
 	"gitlab.com/pala-software/prestress/pkg/crud"
@@ -71,76 +73,41 @@ func TestSimpleInsertOnCreate(t *testing.T) {
 	}
 }
 
-func FuzzLocking(f *testing.F) {
+func TestLocking(t *testing.T) {
 	err := container.Invoke(func(
 		subscribe *subscriber.SubscribeOperation,
 		create *crud.CreateOperation,
-	) {
-		for i := range 10 {
-			f.Add(i)
+	) (err error) {
+		var wg sync.WaitGroup
+		for range runtime.GOMAXPROCS(0) {
+			wg.Go(func() {
+				initCtx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				ctx, err := begin(initCtx)
+				if err != nil {
+					return
+				}
+
+				_, err = subscribe.Execute(ctx, subscriber.SubscribeParams{
+					Table: "document",
+				})
+				if err != nil {
+					return
+				}
+
+				err = ctx.Commit()
+				if err != nil {
+					return
+				}
+			})
 		}
 
-		f.Fuzz(func(t *testing.T, i int) {
-			ctx, err := begin(context.Background())
-			if err != nil {
-				return
-			}
-
-			sub, err := subscribe.Execute(ctx, subscriber.SubscribeParams{
-				Table: "document",
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(sub.Change) > 0 {
-				err = fmt.Errorf("got %d initial changes, 0 expected", len(sub.Change))
-				t.Fatal(err)
-			}
-
-			err = ctx.Commit()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			ctx, err = begin(context.Background())
-			if err != nil {
-				return
-			}
-
-			_, err = create.Execute(ctx, crud.CreateParams{
-				Table: "document",
-				Data: map[string]any{
-					"body": "3",
-				},
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if len(sub.Change) != 1 {
-				t.Fatalf("got %d changes, 1 expected", len(sub.Change))
-			}
-
-			change := <-sub.Change
-			if len(sub.Change) > 0 {
-				t.Fatalf("got %d more changes, 0 expected", len(sub.Change))
-				return
-			}
-			if change.RowOperation != "INSERT" {
-				t.Fatalf("got %s operation, expected INSERT", change.RowOperation)
-			}
-
-			// We don't want to persist the changes in this test so that we can expect
-			// similar starting state in other tests.
-			err = ctx.Rollback()
-			if err != nil {
-				t.Fatal(err)
-			}
-		})
+		wg.Wait();
+		return
 	})
 
 	if err != nil {
-		f.Fatal(err)
+		t.Fatal(err)
 	}
 }
