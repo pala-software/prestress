@@ -76,7 +76,6 @@ func TestSimpleInsertOnCreate(t *testing.T) {
 func TestLocking(t *testing.T) {
 	err := container.Invoke(func(
 		subscribe *subscriber.SubscribeOperation,
-		create *crud.CreateOperation,
 	) (err error) {
 		var wg sync.WaitGroup
 		for range runtime.GOMAXPROCS(0) {

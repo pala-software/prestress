@@ -58,14 +58,24 @@ func (op *SubscribeOperationHandler) Execute(
 	op.mutex.Lock()
 	defer op.mutex.Unlock()
 
+	tx, err := ctx.Tx.Begin(ctx)
+	if err != nil {
+		return
+	}
+
 	// Invoke permission check
-	_, err = ctx.Tx.Exec(
+	_, err = tx.Exec(
 		ctx,
 		fmt.Sprintf(
 			"SELECT FROM %s LIMIT 0",
 			pgx.Identifier{ctx.Schema, params.Table}.Sanitize(),
 		),
 	)
+	if err != nil {
+		return
+	}
+
+	err = tx.Rollback(ctx)
 	if err != nil {
 		return
 	}
