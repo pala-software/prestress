@@ -37,15 +37,4 @@
     '';
     process-compose.depends_on.postgres.condition = "process_healthy";
   };
-  devcontainer = {
-    enable = true;
-    settings.customizations.vscode.extensions = [
-      "mkhl.direnv"
-      "streetsidesoftware.code-spell-checker"
-      "eamodio.gitlens"
-      "golang.go"
-      "bbenoist.Nix"
-      "redhat.vscode-yaml"
-    ];
-  };
 }
