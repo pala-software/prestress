@@ -76,13 +76,19 @@ func (target MigrationTarget) Migrate(
 			return err
 		}
 
-		fmt.Printf("Running migration for %s: %s\n", target.Name, name)
-		_, err = conn.Exec(ctx, string(migration))
+		tx, err := conn.Begin(ctx);
 		if err != nil {
 			return err
 		}
 
-		_, err = conn.Exec(
+		fmt.Printf("Running migration for %s: %s\n", target.Name, name)
+		_, err = tx.Exec(ctx, string(migration))
+		if err != nil {
+			tx.Rollback(ctx)
+			return err
+		}
+
+		_, err = tx.Exec(
 			ctx,
 			`INSERT INTO prestress.database_variable (name, value)
 			VALUES ($1, $2)
@@ -90,6 +96,12 @@ func (target MigrationTarget) Migrate(
 			target.Name+"_version",
 			name,
 		)
+		if err != nil {
+			tx.Rollback(ctx)
+			return err
+		}
+
+		err = tx.Commit(ctx)
 		if err != nil {
 			return err
 		}
