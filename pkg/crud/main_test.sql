@@ -1,22 +1,22 @@
-DROP SCHEMA IF EXISTS test CASCADE;
-CREATE SCHEMA test;
-GRANT USAGE ON SCHEMA test TO public;
+DROP SCHEMA IF EXISTS crud CASCADE;
+CREATE SCHEMA crud;
+GRANT USAGE ON SCHEMA crud TO public;
 
-CREATE TABLE test.find (value TEXT);
-INSERT INTO test.find (value) VALUES (NULL), ('1'), ('2');
-GRANT SELECT ON TABLE test.find TO public;
+CREATE TABLE crud.find (value TEXT);
+INSERT INTO crud.find (value) VALUES (NULL), ('1'), ('2');
+GRANT SELECT ON TABLE crud.find TO public;
 
-CREATE TABLE test.create (value TEXT);
-INSERT INTO test.create (value) VALUES (NULL), ('1'), ('2');
-GRANT SELECT ON TABLE test.create TO public;
-GRANT INSERT ON TABLE test.create TO public;
+CREATE TABLE crud.create (value TEXT);
+INSERT INTO crud.create (value) VALUES (NULL), ('1'), ('2');
+GRANT SELECT ON TABLE crud.create TO public;
+GRANT INSERT ON TABLE crud.create TO public;
 
-CREATE TABLE test.update (value TEXT);
-INSERT INTO test.update (value) VALUES (NULL), ('1'), ('2');
-GRANT SELECT ON TABLE test.update TO public;
-GRANT UPDATE ON TABLE test.update TO public;
+CREATE TABLE crud.update (value TEXT);
+INSERT INTO crud.update (value) VALUES (NULL), ('1'), ('2');
+GRANT SELECT ON TABLE crud.update TO public;
+GRANT UPDATE ON TABLE crud.update TO public;
 
-CREATE TABLE test.delete (value TEXT);
-INSERT INTO test.delete (value) VALUES (NULL), ('1'), ('2');
-GRANT SELECT ON TABLE test.delete TO public;
-GRANT DELETE ON TABLE test.delete TO public;
+CREATE TABLE crud.delete (value TEXT);
+INSERT INTO crud.delete (value) VALUES (NULL), ('1'), ('2');
+GRANT SELECT ON TABLE crud.delete TO public;
+GRANT DELETE ON TABLE crud.delete TO public;

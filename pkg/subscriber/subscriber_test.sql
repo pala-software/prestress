@@ -1,7 +1,7 @@
-DROP SCHEMA IF EXISTS test CASCADE;
-CREATE SCHEMA test;
-GRANT USAGE ON SCHEMA test TO public;
+DROP SCHEMA IF EXISTS subscriber CASCADE;
+CREATE SCHEMA subscriber;
+GRANT USAGE ON SCHEMA subscriber TO public;
 
-CREATE TABLE test.document (body TEXT);
-INSERT INTO test.document (body) VALUES (NULL), ('1'), ('2');
-GRANT SELECT ON TABLE test.document TO public;
+CREATE TABLE subscriber.document (body TEXT);
+INSERT INTO subscriber.document (body) VALUES (NULL), ('1'), ('2');
+GRANT SELECT ON TABLE subscriber.document TO public;

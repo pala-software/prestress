@@ -154,7 +154,7 @@ func runTestMigrations(mig *migrator.Migrator, pool *pgxpool.Pool) (err error) {
 
 func begin(initCtx context.Context) (ctx prestress.OperationContext, err error) {
 	err = container.Invoke(func(begin *prestress.BeginOperation, authenticator auth.Authenticator) (err error) {
-		ctx, err = begin.Begin(initCtx, "test", nil)
+		ctx, err = begin.Begin(initCtx, "subscriber", nil)
 		ctx.Variables["auth"], err = authenticator.Authenticate(nil)
 		if err != nil {
 			return
