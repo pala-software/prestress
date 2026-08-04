@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,6 +28,7 @@ func (params SubscribeParams) Details() map[string]string {
 
 type SubscribeOperationHandler struct {
 	ctx           context.Context
+	pool          *pgxpool.Pool
 	conn          *pgxpool.Conn
 	mutex         *sync.Mutex
 	subscriptions map[int]*Subscription
@@ -95,12 +98,18 @@ func (op *SubscribeOperationHandler) Execute(
 
 	sub = &Subscription{
 		Change: make(chan Change, 100),
+		Done: make(chan any),
 	}
 	op.subscriptions[subId] = sub
 
 	context.AfterFunc(ctx, func() {
 		op.mutex.Lock()
 		defer op.mutex.Unlock()
+
+		if sub.IsDone {
+			return
+		}
+		sub.IsDone = true
 
 		_, err := op.conn.Exec(
 			op.ctx,
@@ -162,6 +171,9 @@ func (op SubscribeOperationHandler) Handle(
 		case <-request.Context().Done():
 			return
 
+		case <-sub.Done:
+			return
+
 		case change := <-sub.Change:
 			encodedChange, err := json.Marshal(change)
 			if err != nil {
@@ -190,6 +202,53 @@ func (op SubscribeOperationHandler) Handle(
 	}
 }
 
+func (op *SubscribeOperationHandler) maintainConn() {
+	for {
+		select {
+		case <-op.ctx.Done():
+				return
+
+		case <-time.Tick(1 * time.Second):
+			if err := op.conn.Ping(op.ctx); err != nil {
+				if err := op.resetConn(); err != nil {
+					log.Panicf("failed to reset conn for subscribe operation: %v", err)
+				}
+			}
+		}
+	}
+}
+
+func (op *SubscribeOperationHandler) resetConn() error {
+	op.mutex.Lock()
+	defer op.mutex.Unlock()
+
+	for _, sub := range op.subscriptions {
+		sub.IsDone = true
+		sub.Done<-nil
+	}
+	op.subscriptions = map[int]*Subscription{}
+
+	if err := op.conn.Hijack().Close(op.ctx); err != nil {
+		return fmt.Errorf("failed to close conn: %v", err)
+	}
+	op.conn = nil
+
+	// Wait for the database to recover
+	tries := 10
+	waitTime := 100 * time.Millisecond
+	for n := 0; n < tries && op.pool.Ping(op.ctx) != nil; n++ {
+		time.Sleep(waitTime)
+	}
+
+	var err error
+	op.conn, err = op.pool.Acquire(op.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to acquire conn: %v", err)
+	}
+
+	return nil
+}
+
 type SubscribeOperation struct {
 	*prestress.Operation[
 		SubscribeParams,
@@ -207,6 +266,7 @@ func NewSubscribeOperation(
 ) *SubscribeOperation {
 	handler := &SubscribeOperationHandler{
 		subscriptions: make(map[int]*Subscription),
+		pool: pool,
 	}
 
 	var cancel context.CancelFunc
@@ -214,6 +274,7 @@ func NewSubscribeOperation(
 	lifecycle.Start.Register(func() (err error) {
 		handler.conn, err = pool.Acquire(handler.ctx)
 		handler.mutex = &sync.Mutex{}
+		go handler.maintainConn()
 		return
 	})
 	lifecycle.Shutdown.Register(func() (err error) {

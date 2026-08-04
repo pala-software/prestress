@@ -10,6 +10,8 @@ type Change struct {
 
 type Subscription struct {
 	Change chan Change
+	Done chan any
+	IsDone bool
 }
 
 func (Subscription) Details() map[string]string {
